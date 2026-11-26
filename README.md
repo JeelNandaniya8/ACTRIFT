@@ -53,3 +53,7 @@ ghostdiff verify contracts.json --target http://127.0.0.1:3001 --allow-actions
 ```
 
 See [contract documentation](docs/contracts.md), [benchmark methodology](benchmarks/README.md), and [CI runs](https://github.com/JeelNandaniya8/GHOSTDIFF/actions). The initial browser test workflow passed. The expanded suite must be verified independently. The benchmark is synthetic, not a real-world accuracy claim.
+
+## Release and external benchmark
+
+The research-preview release is gated on passing the expanded CI matrix. See [GitHub Releases](https://github.com/JeelNandaniya8/GHOSTDIFF/releases) for published packages. The external benchmark uses a pinned CC0 MDN dialog example with a deliberately planted fault, not a historical production bug. Run `python benchmarks/upstream.py` to reproduce it.

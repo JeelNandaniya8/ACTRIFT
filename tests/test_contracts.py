@@ -36,3 +36,22 @@ class ContractTests(unittest.TestCase):
         e,r=fixture();html=render_observatory(e)
         self.assertIn("Export &lt;script&gt;",html)
         self.assertNotIn("Export <script>",html)
+
+
+import os
+from ghostdiff.contracts import verify
+from ghostdiff.demo import app, serve
+from ghostdiff.engine import compare
+
+@unittest.skipUnless(os.environ.get("GHOSTDIFF_BROWSER_TESTS")=="1","enable browser tests explicitly")
+class BrowserContractTests(unittest.TestCase):
+    def test_verify_good_and_bad(self):
+        with serve(app()) as baseline, serve(app(broken=True)) as broken, serve(app(redesign=True)) as clean:
+            cfg=Settings(depth=1,budget=8,settle_ms=150)
+            evidence=compare(baseline,broken,cfg)
+            contracts=freeze(evidence)
+            good_result=verify(contracts,clean)
+            bad_result=verify(contracts,broken)
+        self.assertEqual(set(good_result["summary"]),{"matched"})
+        self.assertGreater(bad_result["summary"].get("changed",0),0)
+        self.assertNotIn("inconclusive",bad_result["summary"])

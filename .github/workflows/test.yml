@@ -21,6 +21,7 @@ jobs:
         env:
           GHOSTDIFF_BROWSER_TESTS: '1'
       - run: python benchmarks/run.py --out benchmark.json
+      - run: python benchmarks/upstream.py --out upstream-benchmark.json
       - run: ghostdiff demo --out demo-report
       - run: ghostdiff freeze demo-report/evidence.json --out contracts.json --test-out test_protected.py
       - run: python -m compileall -q test_protected.py
@@ -29,6 +30,32 @@ jobs:
           name: evidence-python-${{ matrix.python }}
           path: |
             benchmark.json
+            upstream-benchmark.json
             demo-report/
             contracts.json
             test_protected.py
+
+  release-preview:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: ghostdiff-preview-release
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install build
+      - run: python -m build
+      - run: |
+          if gh release view v0.2.0 >/dev/null 2>&1; then
+            echo "Preview already published"
+          else
+            gh release create v0.2.0 --target "$GITHUB_SHA" --prerelease --title "GHOSTDIFF v0.2.0 — Research preview" --notes-file docs/release-0.2.0.md dist/*
+          fi
+        env:
+          GH_TOKEN: ${{ github.token }}
