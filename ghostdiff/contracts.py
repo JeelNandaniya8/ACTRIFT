@@ -18,8 +18,8 @@ def freeze(evidence):
         raise ValueError("Evidence uses an older observation format; rerun compare before freezing")
     cfg = Settings(**evidence["settings"])
     cfg.validate()
-    if cfg.allow_writes:
-        raise ValueError("Write-enabled sessions cannot be frozen as read-policy contracts")
+    if cfg.allow_writes or cfg.allow_risky_actions:
+        raise ValueError("Write-enabled or risky-action sessions cannot be frozen as read-policy contracts")
     contracts = []
     for row in evidence["paths"]:
         path = row["path"]
@@ -35,7 +35,7 @@ def freeze(evidence):
         contracts.append({"id":key,"path":path,"expected":expected})
     if not contracts:
         raise ValueError("No stable, observable baseline journeys to protect")
-    return {"schema":"ghostdiff.contracts/v1","observation_revision":3,"settings":asdict(replace(cfg, executable=None)),
+    return {"schema":"ghostdiff.contracts/v1","observation_revision":3,"authenticated":bool(evidence.get("authenticated_baseline")),"settings":asdict(replace(cfg, executable=None,screenshots=False)),
             "contracts":contracts,"limits":"Exact action names and observed outcomes only. Not a correctness specification."}
 
 
@@ -50,13 +50,15 @@ def assess(contract, runs):
     return "matched" if outcomes(run)==contract["expected"] else "changed"
 
 
-def verify(data, target, executable=None, aliases=None):
+def verify(data, target, executable=None, aliases=None, storage_state=None):
     validate_url(target)
     if data.get("schema")!="ghostdiff.contracts/v1":
         raise ValueError("Unsupported contract schema")
     if data.get("observation_revision") != 3:
         raise ValueError("Contract observation format changed; rerun compare and freeze")
-    cfg=replace(Settings(**data["settings"]),allow_writes=False,executable=executable)
+    if data.get("authenticated") and storage_state is None:
+        raise ValueError("Authenticated contracts require an explicit test-account storage state")
+    cfg=replace(Settings(**data["settings"]),allow_writes=False,allow_risky_actions=False,executable=executable,screenshots=False)
     cfg.validate()
     contracts=data["contracts"]
     if not 1<=len(contracts)<=200:
@@ -79,7 +81,7 @@ def verify(data, target, executable=None, aliases=None):
         try:
             for item in contracts:
                 path=tuple(alias_map.get((item["id"],i),Action(**a)) for i,a in enumerate(item["path"]))
-                runs=[experiment(browser,target,path,cfg) for _ in range(cfg.repeats)]
+                runs=[experiment(browser,target,path,cfg,storage_state) for _ in range(cfg.repeats)]
                 rows.append({"id":item["id"],"path":item["path"],"executed_path":[asdict(a) for a in path],"status":assess(item,runs),"expected":item["expected"],"observed":runs})
         finally:
             browser.close()
@@ -115,15 +117,17 @@ def validate_aliases(aliases, contracts):
     return mapping
 
 
-def recapture(data,target,executable=None):
+def recapture(data,target,executable=None,storage_state=None):
     """Re-observe old contracts on a trusted baseline. Never silently drop a path."""
     validate_url(target)
     if data.get("schema")!="ghostdiff.contracts/v1" or data.get("observation_revision",1) not in (1,2,3):
         raise ValueError("Unsupported contract revision")
-    cfg=replace(Settings(**data["settings"]),executable=executable)
+    if data.get("authenticated") and storage_state is None:
+        raise ValueError("Authenticated contracts require test-account storage state")
+    cfg=replace(Settings(**data["settings"]),executable=executable,screenshots=False)
     cfg.validate()
-    if cfg.allow_writes:
-        raise ValueError("Write-enabled contracts cannot be recaptured")
+    if cfg.allow_writes or cfg.allow_risky_actions:
+        raise ValueError("Write-enabled or risky-action contracts cannot be recaptured")
     contracts=data["contracts"]
     if not 1<=len(contracts)<=200:
         raise ValueError("Invalid contract count")
@@ -144,7 +148,7 @@ def recapture(data,target,executable=None):
         try:
             for item in contracts:
                 path=tuple(Action(**a) for a in item["path"])
-                runs=[experiment(browser,target,path,cfg) for _ in range(cfg.repeats)]
+                runs=[experiment(browser,target,path,cfg,storage_state) for _ in range(cfg.repeats)]
                 result=runs[0]
                 if any(r["status"]!="ok" for r in runs) or len({signature(r) for r in runs})!=1:
                     failures.append(item["id"])
@@ -161,7 +165,7 @@ def recapture(data,target,executable=None):
             browser.close()
     if failures:
         raise ValueError("Recapture refused: legacy observations not preserved for "+", ".join(failures))
-    return {"schema":"ghostdiff.contracts/v1","observation_revision":3,
+    return {"schema":"ghostdiff.contracts/v1","observation_revision":3,"authenticated":storage_state is not None,
             "settings":asdict(replace(cfg,executable=None)),"contracts":upgraded,
             "recaptured_from_revision":data.get("observation_revision",1),
             "limits":"Recaptured from an explicitly supplied trusted baseline; legacy observable fields matched. Not a correctness specification."}
@@ -181,7 +185,7 @@ class ProtectedBehaviors(unittest.TestCase):
         if os.environ.get("GHOSTDIFF_ALLOW_ACTIONS") != "1":
             self.fail("Set GHOSTDIFF_ALLOW_ACTIONS=1 only for authorized disposable apps")
         source = Path(os.environ.get("GHOSTDIFF_CONTRACTS", "contracts.json"))
-        result = verify(json.loads(source.read_text(encoding="utf-8")), target)
+        result = verify(json.loads(source.read_text(encoding="utf-8")), target, storage_state=os.environ.get("GHOSTDIFF_STORAGE_STATE"))
         self.assertEqual(set(result["summary"]), {"matched"}, json.dumps(result["summary"]))
 
 if __name__ == "__main__":

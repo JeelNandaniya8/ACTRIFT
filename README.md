@@ -2,7 +2,7 @@
 
 **Git diff tells you what changed in code. Ghostdiff investigates what changed in observable behavior.**
 
-An early research preview of a bounded, model-free browser behavior comparison engine. It discovers accessible buttons and links, replays short journeys in fresh browser contexts, compares text/route changes and downloaded bytes, and emits inspectable evidence. It does not prove correctness or infer whether a change was intended.
+**Find broken user journeys before you merge.** Compare two local web app versions without writing a test for every button. Ghostdiff clicks discoverable actions, compares what happened, and gives you replayable evidence. Experimental: it cannot certify every feature or infer intent.
 
 ## Quick start
 
@@ -85,3 +85,11 @@ The selected engine is recorded in evidence and retained by replay and frozen co
 ## Reviewed renames and contract recapture
 
 Use `ghostdiff recapture` to re-observe legacy contracts against a known-good baseline without discarding mismatches, and `ghostdiff verify --aliases` for developer-approved action-name changes. See [contract migration and aliases](docs/contracts.md).
+
+## Practical controls
+
+```sh
+ghostdiff compare --before http://127.0.0.1:3000 --after http://127.0.0.1:3001 --allow-actions --ignore "Delete, Logout" --mask-text .timestamp --screenshots
+```
+
+Risky action names are skipped by default; custom exclusions and text masks reduce coverage. Optional screenshots provide visual evidence. Separate local test-account storage states support authenticated comparisons. See [safety and authentication](docs/safety-and-auth.md) and the [reusable GitHub Action](docs/github-action.md). Reports may contain sensitive data; use synthetic fixtures only.

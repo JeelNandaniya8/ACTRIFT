@@ -1,6 +1,7 @@
 """Portable interactive behavior-tree report. All observations are escaped."""
 import html
 import json
+from .report_media import screenshots, without_images
 
 
 def render_observatory(report):
@@ -17,10 +18,10 @@ def render_observatory(report):
         idx,row=nodes[key]
         status=row["status"]
         title=key[-1][1] if key else "Initial inventory"
-        evidence=e(json.dumps({"before":row["before"],"after":row["after"]},indent=2,ensure_ascii=False))
+        evidence=e(json.dumps({"before":without_images(row["before"]),"after":without_images(row["after"])},indent=2,ensure_ascii=False))
         desc=e(row["reason"])
         sub="".join(render(k) for k in children.get(key,[]))
-        return f'<li data-status="{e(status)}"><details {"open" if not key else ""}><summary><span class="node">{e(title)}</span><span class="state">{e(status.replace("_"," "))}</span></summary><p>{desc}</p><details><summary>Repeated evidence · {idx:02d}</summary><pre>{evidence}</pre></details></details>{("<ul>"+sub+"</ul>") if sub else ""}</li>'
+        return f'<li data-status="{e(status)}"><details {"open" if not key else ""}><summary><span class="node">{e(title)}</span><span class="state">{e(status.replace("_"," "))}</span></summary><p>{desc}</p>{screenshots(row)}<details><summary>Repeated evidence · {idx:02d}</summary><pre>{evidence}</pre></details></details>{("<ul>"+sub+"</ul>") if sub else ""}</li>'
     tree=render(()) if () in nodes else ""
     stats="".join(f'<div><b>{e(v)}</b><span>{e(k.replace("_"," "))}</span></div>' for k,v in sorted(report["summary"].items()))
     return """<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>GHOSTDIFF Observatory</title><style>

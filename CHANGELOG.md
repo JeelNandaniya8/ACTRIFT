@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased — practical controls
+
+- Default risky-name filtering, custom ignore rules and optional text masks.
+- Optional screenshot evidence and separate local test-account storage states.
+- Composite GitHub Action with a read-only job summary and opt-in report artifacts.
+
 ## 0.4.0 — historical evidence preview
 
 - Added action-time uncaught JavaScript exceptions and observation revision 3.

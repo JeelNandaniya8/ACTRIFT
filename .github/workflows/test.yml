@@ -27,6 +27,7 @@ jobs:
       - run: ghostdiff freeze demo-report/evidence.json --out contracts.json --test-out test_protected.py
       - run: python -m compileall -q test_protected.py
       - run: python -m pip check
+      - run: python scripts/ci_summary.py demo-report/evidence.json
       - uses: actions/upload-artifact@v4
         with:
           name: evidence-python-${{ matrix.python }}

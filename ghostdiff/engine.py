@@ -2,7 +2,9 @@
 from __future__ import annotations
 
 from collections import Counter, deque
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, replace
+import base64
+import re
 import hashlib
 import json
 from pathlib import Path
@@ -28,6 +30,10 @@ class Settings:
     allow_writes: bool = False
     executable: str | None = None
     browser: str = 'chromium'
+    ignore: tuple[str, ...] = ()
+    mask_text: tuple[str, ...] = ()
+    screenshots: bool = False
+    allow_risky_actions: bool = False
 
     def validate(self):
         if self.browser not in ('chromium', 'firefox', 'webkit'):
@@ -36,6 +42,11 @@ class Settings:
             raise ValueError('Browser executable must be a path string')
         if type(self.allow_writes) is not bool:
             raise ValueError('allow_writes must be boolean')
+        for value in (self.ignore,self.mask_text):
+            if not isinstance(value,(tuple,list)) or len(value)>30 or any(not isinstance(x,str) or not x.strip() or len(x)>200 for x in value):
+                raise ValueError("Invalid ignore or text-mask rules")
+        if type(self.screenshots) is not bool or type(self.allow_risky_actions) is not bool:
+            raise ValueError("Screenshot and risky-action flags must be boolean")
         for name, low, high in (("depth", 1, 5), ("budget", 1, 200),
                                 ("settle_ms", 0, 5000), ("timeout_ms", 100, 15000),
                                 ("repeats", 2, 5)):
@@ -86,8 +97,40 @@ def available(page) -> list[Action]:
     return [a for a in actions if page.get_by_role(a.role, name=a.name, exact=True).count() == 1]
 
 
-def snapshot(page) -> dict:
-    raw = page.locator('body').inner_text()
+RISKY = re.compile(r"\b(delete|remove|destroy|erase|logout|log out|sign out|unsubscribe|cancel subscription|purchase|buy|pay|transfer|send|publish|checkout)\b", re.I)
+
+
+def ignored(action, cfg):
+    if action.role == "reload":
+        return False
+    name=normal(action.name).casefold()
+    return name in {normal(x).casefold() for x in cfg.ignore} or (not cfg.allow_risky_actions and bool(RISKY.search(name)))
+
+
+def masked_text(page, selectors):
+    if not selectors:
+        return page.locator('body').inner_text()
+    # Restore synchronous DOM changes before returning to the application.
+    return page.evaluate("""selectors => {
+      const nodes=new Set();
+      for(const selector of selectors) for(const node of document.querySelectorAll(selector)){
+        if(node===document.body || node===document.documentElement || !node.style) throw Error('Invalid text mask target');
+        nodes.add(node); if(nodes.size>2000) throw Error('Too many text mask targets');
+      }
+      const old=[...nodes].map(node=>[node,node.getAttribute('style')]);
+      try {
+        for(const [node] of old) node.style.setProperty('display','none','important');
+        return document.body.innerText;
+      } finally {
+        for(const [node,value] of old) {
+          if(value===null) node.removeAttribute('style'); else node.setAttribute('style',value);
+        }
+      }
+    }""",list(selectors))
+
+
+def snapshot(page, cfg=Settings()) -> dict:
+    raw = masked_text(page,cfg.mask_text)
     if len(raw) > 65536:
         raise ValueError("Page text exceeds observation limit (64 Ki characters)")
     lines = sorted(normal(x) for x in raw.splitlines() if normal(x))
@@ -121,10 +164,12 @@ def validate_path(path, cfg):
             raise ValueError("Unsupported action in journey")
 
 
-def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settings) -> dict:
+def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settings, storage_state=None) -> dict:
     """Every path starts in a fresh browser context; no real user session is used."""
     validate_path(path, cfg)
-    context = browser.new_context(accept_downloads=True, service_workers="block")
+    if any(ignored(a,cfg) for a in path):
+        return {"status":"inconclusive","reason":"Action excluded by safety rules","steps":[]}
+    context = browser.new_context(accept_downloads=True, service_workers="block",storage_state=storage_state,viewport={"width":1000,"height":700})
     allowed = origin(url)
     blocked = []
     downloads = []
@@ -167,7 +212,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
             return {"status":"inconclusive", "reason":"Network policy blocked initial request", "steps":steps, "blocked":blocked}
         if len(pages) != 1 or origin(page.url) != allowed:
             return {"status":"inconclusive", "reason":"Unexpected initial navigation or popup", "steps":steps}
-        initial = snapshot(page)
+        initial = snapshot(page,cfg)
         if page_errors:
             return {"status":"inconclusive", "reason":"Uncaught exception during initial load", "page_errors":page_errors[:20], "steps":steps}
         previous = initial
@@ -193,7 +238,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
                 return {"status":"inconclusive", "reason":"Network policy blocked a request", "steps":steps, "blocked":blocked}
             if origin(page.url) != allowed:
                 return {"status":"inconclusive", "reason":"Navigation left the authorized origin", "steps":steps}
-            current = snapshot(page)
+            current = snapshot(page,cfg)
             files = []
             for item in downloads:
                 if item.failure():
@@ -211,7 +256,15 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
             previous = current
         if blocked:
             return {"status":"inconclusive", "reason":"Network policy blocked a request", "steps":steps, "blocked":blocked}
-        return {"status":"ok", "initial":initial, "final":previous, "steps":steps}
+        result={"status":"ok", "initial":initial, "final":previous, "steps":steps}
+        if cfg.screenshots:
+            try:
+                image=page.screenshot(type="jpeg",quality=65,timeout=cfg.timeout_ms,mask=[page.locator(s) for s in cfg.mask_text])
+                if len(image)<=512*1024:
+                    result["screenshot_jpeg"]=base64.b64encode(image).decode("ascii")
+            except Error:
+                result["screenshot_note"]="Screenshot unavailable"
+        return result
     except (Error, OSError, ValueError) as exc:
         return {"status":"inconclusive", "reason":str(exc).splitlines()[0][:350], "steps":steps, "blocked":blocked}
     finally:
@@ -255,20 +308,21 @@ def compare_path(before, after):
     return 'behavior_changed','Observable action outcomes differ; inspect intent'
 
 
-def compare(before_url: str, after_url: str, cfg: Settings) -> dict:
+def compare(before_url: str, after_url: str, cfg: Settings, before_state=None, after_state=None) -> dict:
     cfg.validate()
     validate_url(before_url); validate_url(after_url)
     rows = []
     queue = deque([()])
     seen_paths = {()}
     candidate_only = []
+    skipped = []
     with sync_playwright() as p:
         browser = launch_browser(p,cfg)
         try:
             while queue and len(rows) < cfg.budget:
                 path = queue.popleft()
-                before = [experiment(browser,before_url,path,cfg) for _ in range(cfg.repeats)]
-                after = [experiment(browser,after_url,path,cfg) for _ in range(cfg.repeats)]
+                before = [experiment(browser,before_url,path,replace(cfg,screenshots=cfg.screenshots and i==0),before_state) for i in range(cfg.repeats)]
+                after = [experiment(browser,after_url,path,replace(cfg,screenshots=cfg.screenshots and i==0),after_state) for i in range(cfg.repeats)]
                 status,reason = compare_path(before,after)
                 a,b = before[0],after[0]
                 rows.append({"path":[asdict(x) for x in path],"status":status,"reason":reason,"before":before,"after":after})
@@ -282,24 +336,27 @@ def compare(before_url: str, after_url: str, cfg: Settings) -> dict:
                 if path and path[-1].role != 'reload':
                     acts.insert(0, Action('reload','Reload page'))
                 for action in acts:
+                    if ignored(action,cfg):
+                        skipped.append({"path":[asdict(x) for x in path],"action":asdict(action)})
+                        continue
                     new = path+(action,)
                     if new not in seen_paths and len(seen_paths)<cfg.budget:
                         seen_paths.add(new); queue.append(new)
         finally:
             browser.close()
     return {"schema":"ghostdiff.evidence/v1","before_url":before_url,"after_url":after_url,
-            "observation_revision":3,"settings":asdict(cfg),"summary":dict(Counter(r['status'] for r in rows)),"candidate_only_actions":candidate_only,
-            "paths":rows,"coverage":{"executed_paths":len(rows),"path_budget":cfg.budget,"depth_limit":cfg.depth,"budget_reached":len(rows)>=cfg.budget},"limits":"Bounded baseline exploration without state pruning; exact accessible names; observed deltas, not proof of functional equivalence."}
+            "observation_revision":3,"authenticated_baseline":before_state is not None,"authenticated_candidate":after_state is not None,"settings":asdict(cfg),"summary":dict(Counter(r['status'] for r in rows)),"candidate_only_actions":candidate_only,
+            "paths":rows,"skipped_actions":skipped,"coverage":{"executed_paths":len(rows),"path_budget":cfg.budget,"depth_limit":cfg.depth,"budget_reached":len(rows)>=cfg.budget},"limits":"Bounded baseline exploration without state pruning; exact accessible names; observed deltas, not proof of functional equivalence."}
 
 
-def replay(before_url, after_url, path, cfg):
+def replay(before_url, after_url, path, cfg, before_state=None, after_state=None):
     cfg.validate(); validate_url(before_url); validate_url(after_url)
     validate_path(path,cfg)
     with sync_playwright() as p:
         browser=launch_browser(p,cfg)
         try:
-            a=[experiment(browser,before_url,path,cfg) for _ in range(cfg.repeats)]
-            b=[experiment(browser,after_url,path,cfg) for _ in range(cfg.repeats)]
+            a=[experiment(browser,before_url,path,cfg,before_state) for _ in range(cfg.repeats)]
+            b=[experiment(browser,after_url,path,cfg,after_state) for _ in range(cfg.repeats)]
             status,reason=compare_path(a,b)
             return {"status":status,"reason":reason,"path":[asdict(x) for x in path],"before":a,"after":b}
         finally:
