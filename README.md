@@ -39,7 +39,7 @@ python -m unittest discover -s tests -v
 GHOSTDIFF_BROWSER_TESTS=1 python -m unittest discover -s tests -v
 ```
 
-The browser integration tests exercise planted faults and a clean redesign. Local unit tests are independent of browser availability. Browser execution in the development environment was blocked by policy; CI is intended to validate real navigation on a normal runner. No public benchmark or novelty claim has been established.
+Browser integration tests exercise planted faults and a clean redesign. The original and expanded Chromium CI workflows passed. Newer changes require their own CI verification. No general accuracy or novelty claim has been established.
 
 License: Apache-2.0.
 
@@ -56,11 +56,11 @@ See [contract documentation](docs/contracts.md), [benchmark methodology](benchma
 
 ## Release and external benchmark
 
-The research-preview release is gated on passing the expanded CI matrix. See [GitHub Releases](https://github.com/JeelNandaniya8/GHOSTDIFF/releases) for published packages. The external benchmark uses a pinned CC0 MDN dialog example with a deliberately planted fault, not a historical production bug. Run `python benchmarks/upstream.py` to reproduce it.
+Research-preview distribution artifacts are gated on CI. Automatic release publication returned HTTP 403; a maintainer must publish a release manually. The external benchmark uses a pinned CC0 MDN dialog example with a deliberately planted fault, not a historical production bug. Run `python benchmarks/upstream.py` to reproduce it.
 
 ## Observation reliability
 
-Run `ghostdiff doctor` after installation to verify Chromium launch. The current observation format preserves repeated text occurrences and records action availability changes. A journey with no supported observable effect is classified as `unobserved`, not verified. `--fail-on-change` returns 2 when no equivalent observable journey was found, even if there are no detected changes. Rerun comparison and freeze to migrate older contracts to observation revision 2.
+Run `ghostdiff doctor` after installation to verify Chromium launch. The current observation format preserves repeated text occurrences and records action availability changes. A journey with no supported observable effect is classified as `unobserved`, not verified. `--fail-on-change` returns 2 when no equivalent observable journey was found, even if there are no detected changes. Rerun comparison and freeze to migrate older contracts to the current observation revision 3.
 
 ## Browser portability
 

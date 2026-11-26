@@ -55,8 +55,17 @@ jobs:
       - run: python -m unittest discover -s tests -p test_cross_browser.py -v
         env:
           GHOSTDIFF_CROSS_BROWSER: ${{ matrix.browser }}
+  isolated-demo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f sandbox/Dockerfile -t ghostdiff-preview .
+      - name: Historical benchmark in a network-disabled container
+        run: |
+          docker run --rm --network none --read-only --tmpfs /tmp:rw,nosuid,nodev,size=512m --tmpfs /home/ghostdiff:rw,nosuid,nodev,uid=10001,gid=10001,size=64m --cap-drop ALL --security-opt no-new-privileges --pids-limit 256 --memory 1g --cpus 2 --shm-size 256m --entrypoint python ghostdiff-preview /app/benchmarks/historical.py --out /tmp/historical.json
   package-preview:
-    needs: [test, cross-browser]
+    needs: [test, cross-browser, isolated-demo]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

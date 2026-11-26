@@ -6,6 +6,6 @@ COPY ghostdiff ./ghostdiff
 RUN pip install --no-cache-dir . && python -m playwright install --with-deps chromium && chmod -R a+rX /opt/browsers && useradd --uid 10001 --create-home ghostdiff
 COPY benchmarks ./benchmarks
 USER 10001:10001
-ENV HOME=/home/ghostdiff
+ENV HOME=/home/ghostdiff XDG_CACHE_HOME=/tmp/cache XDG_CONFIG_HOME=/tmp/config
 ENTRYPOINT ["ghostdiff"]
 CMD ["demo","--out","/tmp/report"]

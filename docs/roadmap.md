@@ -1,10 +1,15 @@
 # Roadmap
 
-- Establish green browser CI and package installation checks.
-- Expand deterministic fixtures: persistence, navigation, downloads and hidden state.
-- Measure precision and recall against labeled regressions and harmless changes.
-- Add explicit user-defined behavioral contracts and generated regression tests.
-- Investigate semantic matching with ambiguity rejection.
-- Design state-reset hooks and stronger execution isolation.
+## Implemented, subject to current CI
+- Browser journey comparison and replay, persistent contracts, generated unittest, observatory.
+- Planted benchmarks, pinned external example, one historical upstream defect.
+- Optional browser engines, action exception observations and review-only matching suggestions.
+- Isolated demo container recipe, package artifacts.
 
-These are planned capabilities, not release claims.
+## Research still needed
+- Diverse historical defects in full production-scale open-source applications.
+- Better cross-version semantic matching with measured precision, ambiguity rejection and explicit user approval.
+- Audited production execution isolation, deterministic backend reset, stateful forms, accessibility and non-English workflows.
+- Performance profiling and independent security review.
+
+Do not interpret benchmark fixtures as a universal accuracy estimate.
