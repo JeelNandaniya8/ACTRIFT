@@ -6,6 +6,8 @@ from pathlib import Path
 import sys
 from .engine import Action, Settings, compare, replay
 from .demo import app, serve
+from .contracts import freeze, verify, generate_test
+from .observatory import render_observatory
 
 def report_html(report):
     escape = lambda x: html.escape(str(x))
@@ -21,6 +23,7 @@ def save(report, target):
     out.mkdir(parents=True,exist_ok=True)
     (out/"evidence.json").write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding="utf-8")
     (out/"report.html").write_text(report_html(report),encoding="utf-8")
+    (out/"observatory.html").write_text(render_observatory(report),encoding="utf-8")
     for i,row in enumerate(report["paths"]):
         print(i,row["status"]," > ".join(x["name"] for x in row["path"]) or "Initial inventory")
     print("Summary:",json.dumps(report["summary"],sort_keys=True))
@@ -54,8 +57,24 @@ def main(argv=None):
     p.add_argument("--allow-actions",action="store_true")
     p.add_argument("--allow-writes",action="store_true")
     p.add_argument("--browser-executable")
+    p=sub.add_parser("freeze",help="Create executable baseline contracts from stable evidence")
+    p.add_argument("evidence"); p.add_argument("--out",default="contracts.json"); p.add_argument("--test-out")
+    p=sub.add_parser("verify",help="Replay protected behaviors against a local candidate")
+    p.add_argument("contracts"); p.add_argument("--target",required=True); p.add_argument("--allow-actions",action="store_true"); p.add_argument("--browser-executable"); p.add_argument("--out",default="verification.json")
     a=parser.parse_args(argv)
     try:
+        if a.command=="freeze":
+            data=freeze(json.loads(Path(a.evidence).read_text(encoding="utf-8")))
+            Path(a.out).write_text(json.dumps(data,indent=2),encoding="utf-8")
+            if a.test_out: Path(a.test_out).write_text(generate_test(),encoding="utf-8")
+            print(f"Saved {len(data['contracts'])} stable baseline journeys to {a.out}")
+            return 0
+        if a.command=="verify":
+            if not a.allow_actions: parser.error("verify requires --allow-actions")
+            result=verify(json.loads(Path(a.contracts).read_text(encoding="utf-8")),a.target,a.browser_executable)
+            Path(a.out).write_text(json.dumps(result,indent=2),encoding="utf-8")
+            print(json.dumps(result["summary"],sort_keys=True))
+            return 2 if result["summary"].get("inconclusive") else 1 if result["summary"].get("changed") else 0
         if a.command=="replay":
             if not a.allow_actions: parser.error("replay requires --allow-actions")
             if a.index<0: raise ValueError("Index must be nonnegative")

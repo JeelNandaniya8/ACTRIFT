@@ -121,6 +121,8 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
         if response is None or not response.ok:
             return {"status":"inconclusive", "reason":"Initial HTTP response failed", "steps":[]}
         page.wait_for_timeout(cfg.settle_ms)
+        if blocked:
+            return {"status":"inconclusive", "reason":"Network policy blocked initial request", "steps":steps, "blocked":blocked}
         initial = snapshot(page)
         previous = initial
         for i, action in enumerate(path):
@@ -196,7 +198,6 @@ def compare(before_url: str, after_url: str, cfg: Settings) -> dict:
     rows = []
     queue = deque([()])
     seen_paths = {()}
-    seen_states = set()
     candidate_only = []
     with sync_playwright() as p:
         kwargs = {"headless": True}
@@ -217,13 +218,9 @@ def compare(before_url: str, after_url: str, cfg: Settings) -> dict:
                         candidate_only.append({"path":[asdict(x) for x in path],"action":asdict(action)})
                 if a['status'] != 'ok' or len(path)>=cfg.depth or len({signature(r) for r in before})!=1:
                     continue
-                state = stable_json(a['final'])
-                if state in seen_states:
-                    continue
-                seen_states.add(state)
                 acts = [Action(**x) for x in a['final']['actions']]
                 if path and path[-1].role != 'reload':
-                    acts.append(Action('reload','Reload page'))
+                    acts.insert(0, Action('reload','Reload page'))
                 for action in acts:
                     new = path+(action,)
                     if new not in seen_paths and len(seen_paths)<cfg.budget:
@@ -232,7 +229,7 @@ def compare(before_url: str, after_url: str, cfg: Settings) -> dict:
             browser.close()
     return {"schema":"ghostdiff.evidence/v1","before_url":before_url,"after_url":after_url,
             "settings":asdict(cfg),"summary":dict(Counter(r['status'] for r in rows)),"candidate_only_actions":candidate_only,
-            "paths":rows,"limits":"Bounded baseline exploration; exact accessible names; observed deltas, not proof of functional equivalence."}
+            "paths":rows,"coverage":{"executed_paths":len(rows),"path_budget":cfg.budget,"depth_limit":cfg.depth,"budget_reached":len(rows)>=cfg.budget},"limits":"Bounded baseline exploration without state pruning; exact accessible names; observed deltas, not proof of functional equivalence."}
 
 
 def replay(before_url, after_url, path, cfg):

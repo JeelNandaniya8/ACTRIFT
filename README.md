@@ -42,3 +42,14 @@ GHOSTDIFF_BROWSER_TESTS=1 python -m unittest discover -s tests -v
 The browser integration tests exercise planted faults and a clean redesign. Local unit tests are independent of browser availability. Browser execution in the development environment was blocked by policy; CI is intended to validate real navigation on a normal runner. No public benchmark or novelty claim has been established.
 
 License: Apache-2.0.
+
+## Behavioral DNA and regression contracts
+
+Open `demo-report/observatory.html` to inspect the interactive journey tree, or freeze stable baseline observations into executable regression contracts:
+
+```sh
+ghostdiff freeze demo-report/evidence.json --out contracts.json --test-out test_protected.py
+ghostdiff verify contracts.json --target http://127.0.0.1:3001 --allow-actions
+```
+
+See [contract documentation](docs/contracts.md), [benchmark methodology](benchmarks/README.md), and [CI runs](https://github.com/JeelNandaniya8/GHOSTDIFF/actions). The initial browser test workflow passed. The expanded suite must be verified independently. The benchmark is synthetic, not a real-world accuracy claim.
