@@ -7,3 +7,11 @@ Use `--mask-text .timestamp --mask-text '#order-id'` for deliberate text exclusi
 Use `--screenshots` to include optional viewport images in HTML and JSON evidence. They are not part of the pass/fail signature. Text-mask selectors are also covered in screenshots, but that is not guaranteed sensitive-data redaction.
 
 For authenticated local test apps, create separate Playwright storage-state JSON files using synthetic test accounts and pass `--before-state before.json --after-state after.json`. Never commit state files; they may contain secrets. Use `--storage-state` for verify or recapture, and supply both states for authenticated replay. State filenames and raw cookies/storage are not serialized into reports, but app text, URLs, screenshots and exception messages can still expose data. Do not use real user credentials or production apps. No automatic form filling or submission is implemented.
+
+## Explicit forms
+
+```sh
+ghostdiff journey examples/search-journey.json --before http://127.0.0.1:3000 --after http://127.0.0.1:3001 --allow-actions
+```
+
+Provide named synthetic fill/click/reload steps. Supports accessible textboxes with ordinary text, email, search, URL or telephone inputs; some browser controls require different roles and are not supported. Password-like fields and risky actions are excluded by heuristic. Non-read HTTP methods remain blocked. Storage state is checked against the local origin and cookie host. Never use secrets or personal data in specifications. Rendered input may appear in evidence. Replay using the original specification; discovery contracts cannot freeze scenario evidence.

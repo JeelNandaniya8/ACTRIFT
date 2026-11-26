@@ -10,12 +10,13 @@ from .demo import app, serve
 from .contracts import freeze, verify, generate_test, recapture
 from .observatory import render_observatory
 from .report_media import screenshots, without_images
+from .scenario import run_journeys
 
 def report_html(report):
     escape = lambda x: html.escape(str(x))
     rows = []
     for i, row in enumerate(report["paths"]):
-        title = " / ".join(a["name"] for a in row["path"]) or "Initial inventory"
+        title = row.get("name") or " / ".join(a["name"] for a in row["path"]) or "Initial inventory"
         evidence = json.dumps({"baseline":without_images(row["before"]),"candidate":without_images(row["after"])}, indent=2, ensure_ascii=False)
         rows.append(f'<details><summary>{i:02d} · {escape(title)} <b>{escape(row["status"])}</b></summary><p>{escape(row["reason"])}</p>{screenshots(row)}<pre>{escape(evidence)}</pre></details>')
     return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ghostdiff evidence</title><style>body{font:16px/1.6 system-ui;margin:40px auto;max-width:960px;padding:0 20px;color:#26352f;background:#faf9f6}h1{font-size:3rem;letter-spacing:-.05em}details{border-top:1px solid #bbc5bd;padding:16px 0}summary{cursor:pointer}b{float:right;color:#315c50}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#edf0ec;padding:16px}footer{margin-top:36px}</style><h1>Behavior, compared.</h1><p>GHOSTDIFF / EVIDENCE V1</p><p>'+escape(report["before_url"])+' → '+escape(report["after_url"])+'</p><pre>'+escape(json.dumps(report["summary"],indent=2))+'</pre>'+''.join(rows)+'<footer>'+escape(report["limits"])+'</footer></html>'
@@ -78,8 +79,19 @@ def main(argv=None):
     p=sub.add_parser("recapture",help="Re-observe legacy contracts against a trusted baseline")
     p.add_argument("contracts"); p.add_argument("--baseline",required=True); p.add_argument("--out",required=True); p.add_argument("--allow-actions",action="store_true"); p.add_argument("--browser-executable")
     p.add_argument("--storage-state")
+    p=sub.add_parser("journey",help="Compare explicit synthetic form journeys")
+    p.add_argument("spec"); p.add_argument("--before",required=True); p.add_argument("--after",required=True); p.add_argument("--allow-actions",action="store_true"); p.add_argument("--before-state"); p.add_argument("--after-state"); p.add_argument("--screenshots",action="store_true"); p.add_argument("--out",default="journey-report")
     a=parser.parse_args(argv)
     try:
+        if a.command=="journey":
+            if not a.allow_actions: parser.error("journey requires --allow-actions")
+            report=run_journeys(json.loads(Path(a.spec).read_text(encoding="utf-8")),a.before,a.after,Settings(screenshots=a.screenshots),a.before_state,a.after_state)
+            out=Path(a.out); out.mkdir(parents=True,exist_ok=True)
+            (out/"evidence.json").write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding="utf-8")
+            (out/"report.html").write_text(report_html(report),encoding="utf-8")
+            print(json.dumps(report["summary"],sort_keys=True))
+            if report["summary"].get("inconclusive") or report["summary"].get("unobserved"): return 2
+            return 0 if set(report["summary"])=={"equivalent_observed"} else 1
         if a.command=="doctor":
             from playwright.sync_api import sync_playwright
             from . import __version__

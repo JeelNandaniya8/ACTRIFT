@@ -9,3 +9,5 @@ Browser request interception is not a complete egress control (including redirec
 The optional container recipe disables networking during the bundled demo and uses a non-root account and resource limits. It is not a certified sandbox; a dedicated disposable VM remains recommended for untrusted code.
 
 Storage-state JSON may contain credentials. Never commit or upload it. Optional screenshots and captured text may contain sensitive application data. The default risky-action name filter is a heuristic and cannot prevent all destructive effects; keep using disposable isolated fixtures.
+
+Explicit synthetic form journeys retain the default network and action restrictions. Password-like field detection is heuristic, not a guarantee. Session state is scoped to the target local origin and cookie host. Do not supply secrets or real user information.

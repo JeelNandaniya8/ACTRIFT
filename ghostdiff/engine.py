@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 
 from playwright.sync_api import Browser, Error, sync_playwright
 from .matching import suggestions
+from .session import local_storage_state
 
 
 @dataclass(frozen=True, order=True)
@@ -156,20 +157,25 @@ def has_signal(outcome):
     return any(outcome.get(key) for key in ("text_added", "text_removed", "route_change", "downloads", "actions_added", "actions_removed", "page_errors"))
 
 
-def validate_path(path, cfg):
+def validate_path(path, cfg, form_values=None):
     if len(path) > cfg.depth:
         raise ValueError("Journey exceeds configured depth")
-    for a in path:
-        if a.role not in ("button", "link", "reload") or not isinstance(a.name, str) or not 1 <= len(a.name) <= 120:
+    form_values=form_values or {}
+    for i,a in enumerate(path):
+        allowed=("textbox",) if i in form_values else ("button","link","reload")
+        if a.role not in allowed or not isinstance(a.name, str) or not 1 <= len(a.name) <= 120:
             raise ValueError("Unsupported action in journey")
+        if i in form_values and (not isinstance(form_values[i],str) or len(form_values[i])>500):
+            raise ValueError("Invalid explicit form value")
 
 
-def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settings, storage_state=None) -> dict:
+def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settings, storage_state=None, form_values=None) -> dict:
     """Every path starts in a fresh browser context; no real user session is used."""
-    validate_path(path, cfg)
+    form_values=form_values or {}
+    validate_path(path, cfg,form_values)
     if any(ignored(a,cfg) for a in path):
         return {"status":"inconclusive","reason":"Action excluded by safety rules","steps":[]}
-    context = browser.new_context(accept_downloads=True, service_workers="block",storage_state=storage_state,viewport={"width":1000,"height":700})
+    context = browser.new_context(accept_downloads=True, service_workers="block",storage_state=local_storage_state(storage_state,url),viewport={"width":1000,"height":700})
     allowed = origin(url)
     blocked = []
     downloads = []
@@ -230,7 +236,15 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
                     return {"status":"unmatched", "at":i, "reason":"Accessible action not found", "steps":steps, "blocked":blocked, "suggestions":suggestions(action.role,action.name,available(page))}
                 if count != 1 or not locator.is_visible() or not locator.is_enabled():
                     return {"status":"inconclusive", "at":i, "reason":"Ambiguous, hidden or disabled action", "steps":steps, "blocked":blocked}
-                locator.click(timeout=cfg.timeout_ms)
+                if action.role=="textbox":
+                    typ=(locator.get_attribute("type") or "text").casefold()
+                    if typ not in ("text","email","search","url","tel") or not locator.is_editable():
+                        return {"status":"inconclusive","reason":"Unsupported or read-only form field","steps":steps}
+                    if re.search(r"password|passcode|secret|token|credit.card|card.number|cvv|otp",action.name,re.I):
+                        return {"status":"inconclusive","reason":"Sensitive form field excluded","steps":steps}
+                    locator.fill(form_values[i],timeout=cfg.timeout_ms)
+                else:
+                    locator.click(timeout=cfg.timeout_ms)
             page.wait_for_timeout(cfg.settle_ms)
             if len(pages) != 1:
                 return {"status":"inconclusive", "reason":"Popup navigation unsupported", "steps":steps, "blocked":blocked}
@@ -266,7 +280,8 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
                 result["screenshot_note"]="Screenshot unavailable"
         return result
     except (Error, OSError, ValueError) as exc:
-        return {"status":"inconclusive", "reason":str(exc).splitlines()[0][:350], "steps":steps, "blocked":blocked}
+        reason="Explicit form journey failed" if form_values else str(exc).splitlines()[0][:350]
+        return {"status":"inconclusive", "reason":reason, "steps":steps, "blocked":blocked}
     finally:
         try:
             context.close()

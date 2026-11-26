@@ -1,0 +1,20 @@
+{
+  "schema": "ghostdiff.journeys/v1",
+  "journeys": [
+    {
+      "name": "Search synthetic data",
+      "steps": [
+        {
+          "action": "fill",
+          "name": "Query",
+          "value": "example"
+        },
+        {
+          "action": "click",
+          "role": "button",
+          "name": "Search"
+        }
+      ]
+    }
+  ]
+}

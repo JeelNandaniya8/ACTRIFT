@@ -93,3 +93,7 @@ ghostdiff compare --before http://127.0.0.1:3000 --after http://127.0.0.1:3001 -
 ```
 
 Risky action names are skipped by default; custom exclusions and text masks reduce coverage. Optional screenshots provide visual evidence. Separate local test-account storage states support authenticated comparisons. See [safety and authentication](docs/safety-and-auth.md) and the [reusable GitHub Action](docs/github-action.md). Reports may contain sensitive data; use synthetic fixtures only.
+
+## Explicit form journeys
+
+Use `ghostdiff journey` with a reviewed [JSON specification](examples/search-journey.json) for synthetic textbox inputs and named actions. See [usage and restrictions](docs/safety-and-auth.md).
