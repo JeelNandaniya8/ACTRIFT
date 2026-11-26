@@ -66,8 +66,50 @@ jobs:
       - name: Historical benchmark in a network-disabled container
         run: |
           docker run --rm --network none --read-only --tmpfs /tmp:rw,nosuid,nodev,size=512m --tmpfs /home/ghostdiff:rw,nosuid,nodev,uid=10001,gid=10001,size=64m --cap-drop ALL --security-opt no-new-privileges --pids-limit 256 --memory 1g --cpus 2 --shm-size 256m --entrypoint python ghostdiff-preview /app/benchmarks/historical.py --out /tmp/historical.json
+  action-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - id: fixture
+        shell: bash
+        run: |
+          python -m scripts.serve_demo "$RUNNER_TEMP/fixture.json" >"$RUNNER_TEMP/fixture.log" 2>&1 &
+          for i in $(seq 1 50); do
+            if [ -s "$RUNNER_TEMP/fixture.json" ]; then break; fi
+            sleep 0.1
+          done
+          python -c 'import json,sys; d=json.load(open(sys.argv[1])); print("\n".join(k+"="+v for k,v in d.items()))' "$RUNNER_TEMP/fixture.json" >> "$GITHUB_OUTPUT"
+      - uses: ./
+        id: clean
+        with:
+          before: ${{ steps.fixture.outputs.before }}
+          after: ${{ steps.fixture.outputs.clean }}
+          depth: '1'
+          budget: '8'
+      - uses: ./
+        id: broken
+        continue-on-error: true
+        with:
+          before: ${{ steps.fixture.outputs.before }}
+          after: ${{ steps.fixture.outputs.broken }}
+          depth: '1'
+          budget: '8'
+      - shell: bash
+        env:
+          CLEAN: ${{ steps.clean.outcome }}
+          BROKEN: ${{ steps.broken.outcome }}
+          SUMMARY: ${{ steps.broken.outputs.summary }}
+        run: |
+          test "$CLEAN" = success
+          test "$BROKEN" = failure
+          echo "$SUMMARY" | grep -q 'download_changed: 1'
+          echo "$SUMMARY" | grep -q 'unmatched: 1'
   package-preview:
-    needs: [test, cross-browser, isolated-demo]
+    needs: [test, cross-browser, isolated-demo, action-smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

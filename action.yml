@@ -16,6 +16,13 @@ inputs:
   upload-report:
     description: Upload reports containing observed application data (synthetic data only)
     default: 'false'
+outputs:
+  summary:
+    description: Fixed-label numeric comparison summary
+    value: ${{ steps.compare.outputs.summary }}
+  report-dir:
+    description: Local report directory for this invocation
+    value: ${{ steps.compare.outputs.report-dir }}
 runs:
   using: composite
   steps:
@@ -34,15 +41,19 @@ runs:
         DEPTH: ${{ inputs.depth }}
         BUDGET: ${{ inputs.budget }}
       run: |
+        out=$(mktemp -d "$RUNNER_TEMP/ghostdiff-evidence.XXXXXX")
+        echo "report-dir=$out" >> "$GITHUB_OUTPUT"
+        echo "artifact-id=$(basename "$out")" >> "$GITHUB_OUTPUT"
         set +e
-        ghostdiff compare --before "$BEFORE" --after "$AFTER" --depth "$DEPTH" --budget "$BUDGET" --allow-actions --fail-on-change --out "$RUNNER_TEMP/ghostdiff-evidence"
+        ghostdiff compare --before "$BEFORE" --after "$AFTER" --depth "$DEPTH" --budget "$BUDGET" --allow-actions --fail-on-change --out "$out"
         status=$?
         set -e
-        python "$GITHUB_ACTION_PATH/scripts/ci_summary.py" "$RUNNER_TEMP/ghostdiff-evidence/evidence.json" >> "$GITHUB_STEP_SUMMARY"
+        python "$GITHUB_ACTION_PATH/scripts/ci_summary.py" "$out/evidence.json" >> "$GITHUB_STEP_SUMMARY"
+        python "$GITHUB_ACTION_PATH/scripts/action_output.py" "$out/evidence.json" >> "$GITHUB_OUTPUT"
         exit "$status"
-    - if: always() && inputs.upload-report == 'true'
+    - if: always() && inputs.upload-report == 'true' && steps.compare.outputs.report-dir != ''
       uses: actions/upload-artifact@v4
       with:
-        name: ghostdiff-evidence
-        path: ${{ runner.temp }}/ghostdiff-evidence/
+        name: ${{ steps.compare.outputs.artifact-id }}
+        path: ${{ steps.compare.outputs.report-dir }}
         if-no-files-found: ignore

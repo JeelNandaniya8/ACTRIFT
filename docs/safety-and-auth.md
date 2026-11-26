@@ -6,7 +6,7 @@ Use `--mask-text .timestamp --mask-text '#order-id'` for deliberate text exclusi
 
 Use `--screenshots` to include optional viewport images in HTML and JSON evidence. They are not part of the pass/fail signature. Text-mask selectors are also covered in screenshots, but that is not guaranteed sensitive-data redaction.
 
-For authenticated local test apps, create separate Playwright storage-state JSON files using synthetic test accounts and pass `--before-state before.json --after-state after.json`. Never commit state files; they may contain secrets. Use `--storage-state` for verify or recapture, and supply both states for authenticated replay. State filenames and raw cookies/storage are not serialized into reports, but app text, URLs, screenshots and exception messages can still expose data. Do not use real user credentials or production apps. No automatic form filling or submission is implemented.
+For authenticated local test apps, create separate Playwright storage-state JSON files using synthetic test accounts and pass `--before-state before.json --after-state after.json`. Never commit state files; they may contain secrets. Use `--storage-state` for verify or recapture, and supply both states for authenticated replay. State filenames and raw cookies/storage are not serialized into reports, but app text, URLs, screenshots and exception messages can still expose data. Do not use real user credentials or production apps. Automatic form discovery or submission is not implemented; explicit synthetic journeys are supported below.
 
 ## Explicit forms
 

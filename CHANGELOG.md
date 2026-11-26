@@ -2,6 +2,9 @@
 
 ## Unreleased — practical controls
 
+- Added explicit synthetic form journeys, local storage-state scope checks and unique CI report directories.
+- Added composite-action smoke tests and an opt-in same-repository PR comment recipe.
+
 - Default risky-name filtering, custom ignore rules and optional text masks.
 - Optional screenshot evidence and separate local test-account storage states.
 - Composite GitHub Action with a read-only job summary and opt-in report artifacts.

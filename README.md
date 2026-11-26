@@ -97,3 +97,5 @@ Risky action names are skipped by default; custom exclusions and text masks redu
 ## Explicit form journeys
 
 Use `ghostdiff journey` with a reviewed [JSON specification](examples/search-journey.json) for synthetic textbox inputs and named actions. See [usage and restrictions](docs/safety-and-auth.md).
+
+The reusable GitHub Action now emits a numeric summary for an optional maintainer-authorized PR comment. The action smoke workflow checks a clean redesign and a deliberately broken candidate before packaging.
