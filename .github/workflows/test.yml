@@ -35,8 +35,26 @@ jobs:
             contracts.json
             test_protected.py
 
+  cross-browser:
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: ['firefox', 'webkit']
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e .
+      - run: python -m playwright install --with-deps ${{ matrix.browser }}
+      - run: ghostdiff doctor --browser ${{ matrix.browser }}
+      - run: python -m unittest discover -s tests -p test_cross_browser.py -v
+        env:
+          GHOSTDIFF_CROSS_BROWSER: ${{ matrix.browser }}
   release-preview:
-    needs: test
+    needs: [test, cross-browser]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
@@ -52,10 +70,15 @@ jobs:
       - run: pip install build
       - run: python -m build
       - run: |
-          if gh release view v0.2.0 >/dev/null 2>&1; then
+          python -m venv /tmp/ghostdiff-wheel-check
+          /tmp/ghostdiff-wheel-check/bin/pip install dist/*.whl
+          cd /tmp
+          /tmp/ghostdiff-wheel-check/bin/ghostdiff --help
+      - run: |
+          if gh release view v0.3.0 >/dev/null 2>&1; then
             echo "Preview already published"
           else
-            gh release create v0.2.0 --target "$GITHUB_SHA" --prerelease --title "GHOSTDIFF v0.2.0 — Research preview" --notes-file docs/release-0.2.0.md dist/*
+            gh release create v0.3.0 --target "$GITHUB_SHA" --prerelease --title "GHOSTDIFF v0.3.0 — Research preview" --notes-file docs/release-0.3.0.md dist/*
           fi
         env:
           GH_TOKEN: ${{ github.token }}

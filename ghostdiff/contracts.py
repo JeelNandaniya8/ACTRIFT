@@ -4,7 +4,7 @@ from dataclasses import asdict, replace
 from hashlib import sha256
 
 from playwright.sync_api import sync_playwright
-from .engine import Action, Settings, experiment, signature, stable_json, validate_url, has_signal
+from .engine import Action, Settings, experiment, signature, stable_json, validate_url, has_signal, launch_browser
 
 
 def outcomes(result):
@@ -74,7 +74,7 @@ def verify(data, target, executable=None):
                 raise ValueError("Unsupported action")
     rows=[]
     with sync_playwright() as p:
-        browser=p.chromium.launch(headless=True,**({"executable_path":executable} if executable else {}))
+        browser=launch_browser(p,cfg)
         try:
             for item in contracts:
                 path=tuple(Action(**a) for a in item["path"])

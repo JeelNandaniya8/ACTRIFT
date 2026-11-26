@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import sys
 from playwright.sync_api import Error as BrowserError
-from .engine import Action, Settings, compare, replay
+from .engine import Action, Settings, compare, replay, launch_browser
 from .demo import app, serve
 from .contracts import freeze, verify, generate_test
 from .observatory import render_observatory
@@ -41,6 +41,7 @@ def main(argv=None):
         p.add_argument("--timeout-ms",type=int,default=2500)
         p.add_argument("--repeats",type=int,default=2)
         p.add_argument("--browser-executable")
+        p.add_argument("--browser",choices=("chromium","firefox","webkit"),default="chromium")
         p.add_argument("--out",default="ghostdiff-report")
         if name=="compare":
             p.add_argument("--before",required=True)
@@ -50,7 +51,8 @@ def main(argv=None):
             p.add_argument("--fail-on-change",action="store_true")
         else:
             p.add_argument("--clean",action="store_true")
-    sub.add_parser("doctor",help="Check browser installation and launch")
+    p=sub.add_parser("doctor",help="Check browser installation and launch")
+    p.add_argument("--browser",choices=("chromium","firefox","webkit"),default="chromium")
     p=sub.add_parser("replay")
     p.add_argument("evidence")
     p.add_argument("--index",type=int,required=True)
@@ -69,9 +71,9 @@ def main(argv=None):
             from playwright.sync_api import sync_playwright
             from . import __version__
             with sync_playwright() as p:
-                browser=p.chromium.launch(headless=True)
+                browser=launch_browser(p,Settings(browser=a.browser))
                 try:
-                    print(f"GHOSTDIFF {__version__}; Chromium {browser.version}; browser launch OK")
+                    print(f"GHOSTDIFF {__version__}; {a.browser} {browser.version}; browser launch OK")
                 finally:
                     browser.close()
             return 0
@@ -97,7 +99,7 @@ def main(argv=None):
             result=replay(a.before,a.after,tuple(Action(**x) for x in row["path"]),Settings(**settings))
             print(json.dumps(result,indent=2,ensure_ascii=False))
             return 2 if result["status"]=="inconclusive" else 0
-        cfg=Settings(depth=a.depth,budget=a.budget,settle_ms=a.settle_ms,timeout_ms=a.timeout_ms,repeats=a.repeats,allow_writes=getattr(a,"allow_writes",False),executable=a.browser_executable)
+        cfg=Settings(depth=a.depth,budget=a.budget,settle_ms=a.settle_ms,timeout_ms=a.timeout_ms,repeats=a.repeats,allow_writes=getattr(a,"allow_writes",False),executable=a.browser_executable,browser=a.browser)
         if a.command=="demo":
             with serve(app()) as before, serve(app(broken=not a.clean,redesign=True)) as after:
                 report=compare(before,after,cfg)
@@ -116,7 +118,7 @@ def main(argv=None):
         return 130
     except BrowserError as exc:
         print(f"ghostdiff: browser unavailable or failed: {str(exc).splitlines()[0]}",file=sys.stderr)
-        print("Try: python -m playwright install chromium; ghostdiff doctor",file=sys.stderr)
+        print("Install the requested browser with python -m playwright install <browser>; run ghostdiff doctor --browser <browser>",file=sys.stderr)
         return 2
     except (ValueError,OSError,KeyError,IndexError,TypeError,AttributeError) as exc:
         print(f"ghostdiff: {exc}",file=sys.stderr)

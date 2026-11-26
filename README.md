@@ -61,3 +61,15 @@ The research-preview release is gated on passing the expanded CI matrix. See [Gi
 ## Observation reliability
 
 Run `ghostdiff doctor` after installation to verify Chromium launch. The current observation format preserves repeated text occurrences and records action availability changes. A journey with no supported observable effect is classified as `unobserved`, not verified. `--fail-on-change` returns 2 when no equivalent observable journey was found, even if there are no detected changes. Rerun comparison and freeze to migrate older contracts to observation revision 2.
+
+## Browser portability
+
+Chromium is the default. Firefox and WebKit have optional experimental support with a dedicated smoke-test CI gate:
+
+```sh
+python -m playwright install firefox
+ghostdiff doctor --browser firefox
+ghostdiff demo --browser firefox
+```
+
+The selected engine is recorded in evidence and retained by replay and frozen contracts. Different engines can expose different behavior; compare using the same engine. This is not a guarantee of macOS Safari equivalence or compatibility with every app.

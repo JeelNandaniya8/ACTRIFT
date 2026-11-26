@@ -26,13 +26,28 @@ class Settings:
     repeats: int = 2
     allow_writes: bool = False
     executable: str | None = None
+    browser: str = 'chromium'
 
     def validate(self):
+        if self.browser not in ('chromium', 'firefox', 'webkit'):
+            raise ValueError('Unsupported browser engine')
+        if self.executable is not None and not isinstance(self.executable, str):
+            raise ValueError('Browser executable must be a path string')
+        if type(self.allow_writes) is not bool:
+            raise ValueError('allow_writes must be boolean')
         for name, low, high in (("depth", 1, 5), ("budget", 1, 200),
                                 ("settle_ms", 0, 5000), ("timeout_ms", 100, 15000),
                                 ("repeats", 2, 5)):
             if type(getattr(self, name)) is not int or not low <= getattr(self, name) <= high:
                 raise ValueError(f"{name} must be between {low} and {high}")
+
+
+def launch_browser(playwright, cfg: Settings):
+    cfg.validate()
+    kwargs = {'headless': True}
+    if cfg.executable:
+        kwargs['executable_path'] = cfg.executable
+    return getattr(playwright, cfg.browser).launch(**kwargs)
 
 
 def origin(url: str) -> tuple:
@@ -236,10 +251,7 @@ def compare(before_url: str, after_url: str, cfg: Settings) -> dict:
     seen_paths = {()}
     candidate_only = []
     with sync_playwright() as p:
-        kwargs = {"headless": True}
-        if cfg.executable:
-            kwargs['executable_path'] = cfg.executable
-        browser = p.chromium.launch(**kwargs)
+        browser = launch_browser(p,cfg)
         try:
             while queue and len(rows) < cfg.budget:
                 path = queue.popleft()
@@ -272,7 +284,7 @@ def replay(before_url, after_url, path, cfg):
     cfg.validate(); validate_url(before_url); validate_url(after_url)
     validate_path(path,cfg)
     with sync_playwright() as p:
-        browser=p.chromium.launch(headless=True, **({'executable_path':cfg.executable} if cfg.executable else {}))
+        browser=launch_browser(p,cfg)
         try:
             a=[experiment(browser,before_url,path,cfg) for _ in range(cfg.repeats)]
             b=[experiment(browser,after_url,path,cfg) for _ in range(cfg.repeats)]

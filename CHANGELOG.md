@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 — reliability preview
+
+- Add selectable browser engines, dedicated Firefox and WebKit smoke CI, and wheel installation validation.
 
 - Preserve duplicate text occurrences and record action availability changes.
 - Mark no-effect journeys unobserved instead of equivalent; reject incompatible observation revisions.

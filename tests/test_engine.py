@@ -74,3 +74,9 @@ class ReliabilityTests(unittest.TestCase):
     def test_invalid_urls(self):
         for url in ["http://@localhost","http://localhost\n","http://localhost:bad"]:
             with self.assertRaises(ValueError): validate_url(url)
+
+    def test_browser_validation(self):
+        for browser in ("chromium","firefox","webkit"):
+            Settings(browser=browser).validate()
+        with self.assertRaises(ValueError): Settings(browser="unknown").validate()
+        with self.assertRaises(ValueError): Settings(allow_writes="false").validate()
