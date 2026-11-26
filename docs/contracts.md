@@ -14,3 +14,21 @@ Contracts preserve exact names, text/route deltas and download bytes, not semant
 Observation revision 2 adds repeated-text and action availability evidence. Older evidence and contracts must be recreated before use; they are deliberately rejected rather than silently compared with incompatible observations.
 
 Revision 3 adds action-time uncaught exception evidence. Rerun compare and freeze to migrate; baseline journeys containing exceptions are not frozen as healthy contracts. No unsafe automatic migration of older evidence is attempted.
+
+## Recapture older contracts
+
+```sh
+ghostdiff recapture old-contracts.json --baseline http://127.0.0.1:3000 --out contracts-v3.json --allow-actions
+```
+
+Use a known-good disposable baseline, never the new unverified candidate. Every previous observable field must match in repeated runs, and every prior contract must be recaptured; otherwise the command refuses. It never overwrites an existing destination. Inspect the output before adoption.
+
+## Explicit action aliases
+
+For a reviewed rename, provide a JSON file:
+
+```json
+{"schema":"ghostdiff.aliases/v1","aliases":[{"contract_id":"actual-contract-id","step":0,"from":"Export PDF","to":"Download PDF"}]}
+```
+
+Pass it to `ghostdiff verify contracts-v3.json --target http://127.0.0.1:3001 --allow-actions --aliases aliases.json`. The exact replacement action is clicked only when the developer explicitly provides the mapping. Outcome assertions are unchanged, and evidence records the executed path. This does not prove semantic equivalence; it simply allows reviewed renames to be tested.

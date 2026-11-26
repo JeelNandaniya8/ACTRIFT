@@ -28,3 +28,5 @@ https://github.com/JeelNandaniya8/GHOSTDIFF
 - Download the distribution artifact from the passing run.
 - Create a prerelease as a maintainer at https://github.com/JeelNandaniya8/GHOSTDIFF/releases/new.
 - Submit via https://news.ycombinator.com/submit and https://www.reddit.com/submit or https://x.com/compose/post from the owner's authenticated accounts; follow community rules, disclose experimental limitations, never manufacture engagement.
+
+Publication requires authenticated account access and a verified latest distribution. No social announcement or release is implied by this document.

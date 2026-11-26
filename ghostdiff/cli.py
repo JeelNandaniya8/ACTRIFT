@@ -7,7 +7,7 @@ import sys
 from playwright.sync_api import Error as BrowserError
 from .engine import Action, Settings, compare, replay, launch_browser
 from .demo import app, serve
-from .contracts import freeze, verify, generate_test
+from .contracts import freeze, verify, generate_test, recapture
 from .observatory import render_observatory
 
 def report_html(report):
@@ -65,6 +65,9 @@ def main(argv=None):
     p.add_argument("evidence"); p.add_argument("--out",default="contracts.json"); p.add_argument("--test-out")
     p=sub.add_parser("verify",help="Replay protected behaviors against a local candidate")
     p.add_argument("contracts"); p.add_argument("--target",required=True); p.add_argument("--allow-actions",action="store_true"); p.add_argument("--browser-executable"); p.add_argument("--out",default="verification.json")
+    p.add_argument("--aliases",help="Explicitly reviewed per-contract action mapping JSON")
+    p=sub.add_parser("recapture",help="Re-observe legacy contracts against a trusted baseline")
+    p.add_argument("contracts"); p.add_argument("--baseline",required=True); p.add_argument("--out",required=True); p.add_argument("--allow-actions",action="store_true"); p.add_argument("--browser-executable")
     a=parser.parse_args(argv)
     try:
         if a.command=="doctor":
@@ -83,9 +86,18 @@ def main(argv=None):
             if a.test_out: Path(a.test_out).write_text(generate_test(),encoding="utf-8")
             print(f"Saved {len(data['contracts'])} stable baseline journeys to {a.out}")
             return 0
+        if a.command=="recapture":
+            if not a.allow_actions: parser.error("recapture requires --allow-actions")
+            target=Path(a.out)
+            if target.exists(): raise ValueError("Recapture destination already exists; choose a new file")
+            result=recapture(json.loads(Path(a.contracts).read_text(encoding="utf-8")),a.baseline,a.browser_executable)
+            with target.open("x",encoding="utf-8") as fp: json.dump(result,fp,indent=2)
+            print(f"Recaptured {len(result['contracts'])} contracts; review before use")
+            return 0
         if a.command=="verify":
             if not a.allow_actions: parser.error("verify requires --allow-actions")
-            result=verify(json.loads(Path(a.contracts).read_text(encoding="utf-8")),a.target,a.browser_executable)
+            aliases=json.loads(Path(a.aliases).read_text(encoding="utf-8")) if a.aliases else None
+            result=verify(json.loads(Path(a.contracts).read_text(encoding="utf-8")),a.target,a.browser_executable,aliases)
             Path(a.out).write_text(json.dumps(result,indent=2),encoding="utf-8")
             print(json.dumps(result["summary"],sort_keys=True))
             return 2 if result["summary"].get("inconclusive") else 1 if result["summary"].get("changed") else 0

@@ -81,3 +81,7 @@ The selected engine is recorded in evidence and retained by replay and frozen co
 - Observation revision 3 records uncaught JavaScript exceptions during actions. Re-run comparison and freeze contracts; earlier formats are rejected.
 - See [isolated demo runner](sandbox/README.md). It is not an audited production sandbox.
 - Distribution wheels are built as [CI artifacts](https://github.com/JeelNandaniya8/GHOSTDIFF/actions) after the test matrix. Release publishing requires maintainer permissions.
+
+## Reviewed renames and contract recapture
+
+Use `ghostdiff recapture` to re-observe legacy contracts against a known-good baseline without discarding mismatches, and `ghostdiff verify --aliases` for developer-approved action-name changes. See [contract migration and aliases](docs/contracts.md).
