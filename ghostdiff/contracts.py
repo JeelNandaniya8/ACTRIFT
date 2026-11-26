@@ -14,7 +14,7 @@ def outcomes(result):
 def freeze(evidence):
     if evidence.get("schema") != "ghostdiff.evidence/v1":
         raise ValueError("Unsupported evidence schema")
-    if evidence.get("observation_revision") != 2:
+    if evidence.get("observation_revision") != 3:
         raise ValueError("Evidence uses an older observation format; rerun compare before freezing")
     cfg = Settings(**evidence["settings"])
     cfg.validate()
@@ -29,13 +29,13 @@ def freeze(evidence):
         if len({signature(r) for r in runs}) != 1:
             continue
         expected = outcomes(runs[0])
-        if not any(has_signal(o) for o in expected):
+        if any(o.get("page_errors") for o in expected) or not any(has_signal(o) for o in expected):
             continue
         key = sha256(stable_json(path).encode()).hexdigest()[:16]
         contracts.append({"id":key,"path":path,"expected":expected})
     if not contracts:
         raise ValueError("No stable, observable baseline journeys to protect")
-    return {"schema":"ghostdiff.contracts/v1","observation_revision":2,"settings":asdict(replace(cfg, executable=None)),
+    return {"schema":"ghostdiff.contracts/v1","observation_revision":3,"settings":asdict(replace(cfg, executable=None)),
             "contracts":contracts,"limits":"Exact action names and observed outcomes only. Not a correctness specification."}
 
 
@@ -54,7 +54,7 @@ def verify(data, target, executable=None):
     validate_url(target)
     if data.get("schema")!="ghostdiff.contracts/v1":
         raise ValueError("Unsupported contract schema")
-    if data.get("observation_revision") != 2:
+    if data.get("observation_revision") != 3:
         raise ValueError("Contract observation format changed; rerun compare and freeze")
     cfg=replace(Settings(**data["settings"]),allow_writes=False,executable=executable)
     cfg.validate()

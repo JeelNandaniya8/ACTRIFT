@@ -12,3 +12,5 @@ The generated unittest can run in CI with GHOSTDIFF_TARGET and GHOSTDIFF_CONTRAC
 Contracts preserve exact names, text/route deltas and download bytes, not semantic intent. Write-enabled comparisons cannot be frozen; no-op paths without observable outcomes are excluded. Review contracts before committing them because text may include sensitive data.
 
 Observation revision 2 adds repeated-text and action availability evidence. Older evidence and contracts must be recreated before use; they are deliberately rejected rather than silently compared with incompatible observations.
+
+Revision 3 adds action-time uncaught exception evidence. Rerun compare and freeze to migrate; baseline journeys containing exceptions are not frozen as healthy contracts. No unsafe automatic migration of older evidence is attempted.

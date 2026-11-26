@@ -80,3 +80,11 @@ class ReliabilityTests(unittest.TestCase):
             Settings(browser=browser).validate()
         with self.assertRaises(ValueError): Settings(browser="unknown").validate()
         with self.assertRaises(ValueError): Settings(allow_writes="false").validate()
+
+
+class RuntimeEvidenceTests(unittest.TestCase):
+    def test_new_uncaught_exception(self):
+        o={"text_added":[],"text_removed":[],"route_change":None,"downloads":[],"page_errors":[]}
+        bad={**o,"page_errors":["TypeError: missing value"]}
+        self.assertEqual(compare_path([sample(o)]*2,[sample(bad)]*2)[0],"behavior_changed")
+        self.assertEqual(compare_path([sample(bad)]*2,[sample(o)]*2)[0],"inconclusive")

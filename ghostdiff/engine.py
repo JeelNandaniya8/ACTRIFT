@@ -9,6 +9,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from playwright.sync_api import Browser, Error, sync_playwright
+from .matching import suggestions
 
 
 @dataclass(frozen=True, order=True)
@@ -109,7 +110,7 @@ def delta(before, after, downloads):
 
 
 def has_signal(outcome):
-    return any(outcome.get(key) for key in ("text_added", "text_removed", "route_change", "downloads", "actions_added", "actions_removed"))
+    return any(outcome.get(key) for key in ("text_added", "text_removed", "route_change", "downloads", "actions_added", "actions_removed", "page_errors"))
 
 
 def validate_path(path, cfg):
@@ -127,6 +128,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
     allowed = origin(url)
     blocked = []
     downloads = []
+    page_errors = []
     pages = []
     steps = []
 
@@ -148,6 +150,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
     def watch(page):
         pages.append(page)
         page.on('download', on_download)
+        page.on('pageerror', lambda exc: page_errors.append(normal(str(exc))[:500]))
 
     context.route('**/*', gate)
     if hasattr(context, 'route_web_socket'):
@@ -165,9 +168,12 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
         if len(pages) != 1 or origin(page.url) != allowed:
             return {"status":"inconclusive", "reason":"Unexpected initial navigation or popup", "steps":steps}
         initial = snapshot(page)
+        if page_errors:
+            return {"status":"inconclusive", "reason":"Uncaught exception during initial load", "page_errors":page_errors[:20], "steps":steps}
         previous = initial
         for i, action in enumerate(path):
             downloads.clear()
+            page_errors.clear()
             if action.role == 'reload':
                 response = page.reload(wait_until='domcontentloaded', timeout=cfg.timeout_ms)
                 if response is None or not response.ok:
@@ -176,7 +182,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
                 locator = page.get_by_role(action.role, name=action.name, exact=True)
                 count = locator.count()
                 if count == 0:
-                    return {"status":"unmatched", "at":i, "reason":"Accessible action not found", "steps":steps, "blocked":blocked}
+                    return {"status":"unmatched", "at":i, "reason":"Accessible action not found", "steps":steps, "blocked":blocked, "suggestions":suggestions(action.role,action.name,available(page))}
                 if count != 1 or not locator.is_visible() or not locator.is_enabled():
                     return {"status":"inconclusive", "at":i, "reason":"Ambiguous, hidden or disabled action", "steps":steps, "blocked":blocked}
                 locator.click(timeout=cfg.timeout_ms)
@@ -199,7 +205,9 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
                 data = p.read_bytes()
                 files.append({"name":item.suggested_filename,"bytes":size,"sha256":hashlib.sha256(data).hexdigest(),
                               "format_hint":"pdf" if data.startswith(b'%PDF-') else "other"})
-            steps.append({"action":asdict(action), "outcome":delta(previous,current,files)})
+            outcome=delta(previous,current,files)
+            outcome["page_errors"]=sorted(page_errors[:20])
+            steps.append({"action":asdict(action), "outcome":outcome})
             previous = current
         if blocked:
             return {"status":"inconclusive", "reason":"Network policy blocked a request", "steps":steps, "blocked":blocked}
@@ -215,7 +223,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
 
 def signature(result: dict) -> str:
     if result['status'] != 'ok':
-        return stable_json({k: result.get(k) for k in ('status','at','reason','steps')})
+        return stable_json({k: result.get(k) for k in ('status','at','reason','steps','suggestions','page_errors','blocked')})
     return stable_json({k:result[k] for k in ('initial','final','steps')})
 
 
@@ -234,6 +242,10 @@ def compare_path(before, after):
     aout,bout = [x['outcome'] for x in a['steps']], [x['outcome'] for x in b['steps']]
     if not aout and not bout:
         return 'inventory', 'Initial accessible-action inventory; no action executed'
+    if any(o.get('page_errors') for o in aout):
+        return 'inconclusive','Baseline journey raised an uncaught exception; cannot establish a healthy baseline'
+    if any(o.get('page_errors') for o in bout):
+        return 'behavior_changed','Candidate journey raised a reproducible uncaught exception'
     if aout == bout:
         if not any(has_signal(o) for o in aout):
             return 'unobserved','Both paths executed, but neither produced a supported observable change'
@@ -276,7 +288,7 @@ def compare(before_url: str, after_url: str, cfg: Settings) -> dict:
         finally:
             browser.close()
     return {"schema":"ghostdiff.evidence/v1","before_url":before_url,"after_url":after_url,
-            "observation_revision":2,"settings":asdict(cfg),"summary":dict(Counter(r['status'] for r in rows)),"candidate_only_actions":candidate_only,
+            "observation_revision":3,"settings":asdict(cfg),"summary":dict(Counter(r['status'] for r in rows)),"candidate_only_actions":candidate_only,
             "paths":rows,"coverage":{"executed_paths":len(rows),"path_budget":cfg.budget,"depth_limit":cfg.depth,"budget_reached":len(rows)>=cfg.budget},"limits":"Bounded baseline exploration without state pruning; exact accessible names; observed deltas, not proof of functional equivalence."}
 
 

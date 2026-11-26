@@ -1,0 +1,3 @@
+# Historical upstream defect
+
+Source: [MDN DOM examples fix](https://github.com/mdn/dom-examples/commit/07c7d6e7767f272f54be99a49791ab8d61d7af76). The commit documents an uncaught TypeError when a user clicks Insert before or Insert after without selecting a div. The buggy parent 18cdbb899adfa0d4c8f20c15627a92d0e43dac26 and fixed commit 07c7d6e7767f272f54be99a49791ab8d61d7af76 are stored unmodified, under the upstream CC0 license. The fixed version is the reference; the buggy parent is the candidate to simulate a regression. No defect was planted by this project. This is a real historical example defect, not a production application benchmark.

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.4.0 — historical evidence preview
+
+- Added action-time uncaught JavaScript exceptions and observation revision 3.
+- Added conservative rename suggestions and an unmodified historical upstream defect fixture.
+- Added isolated demo container recipe and permission-independent CI package artifacts.
+
 ## 0.3.0 — reliability preview
 
 - Add selectable browser engines, dedicated Firefox and WebKit smoke CI, and wheel installation validation.

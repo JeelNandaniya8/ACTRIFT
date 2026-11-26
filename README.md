@@ -73,3 +73,11 @@ ghostdiff demo --browser firefox
 ```
 
 The selected engine is recorded in evidence and retained by replay and frozen contracts. Different engines can expose different behavior; compare using the same engine. This is not a guarantee of macOS Safari equivalence or compatibility with every app.
+
+## Historical evidence, matching and isolated execution
+
+- Run `python benchmarks/historical.py` to compare the original fixed revision of an MDN example with its buggy parent (a documented JavaScript exception).
+- Unmatched actions include ranked local name-similarity suggestions; no suggested action is executed automatically. This is a lexical/synonym heuristic, not general semantic equivalence.
+- Observation revision 3 records uncaught JavaScript exceptions during actions. Re-run comparison and freeze contracts; earlier formats are rejected.
+- See [isolated demo runner](sandbox/README.md). It is not an audited production sandbox.
+- Distribution wheels are built as [CI artifacts](https://github.com/JeelNandaniya8/GHOSTDIFF/actions) after the test matrix. Release publishing requires maintainer permissions.
