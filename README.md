@@ -57,3 +57,7 @@ See [contract documentation](docs/contracts.md), [benchmark methodology](benchma
 ## Release and external benchmark
 
 The research-preview release is gated on passing the expanded CI matrix. See [GitHub Releases](https://github.com/JeelNandaniya8/GHOSTDIFF/releases) for published packages. The external benchmark uses a pinned CC0 MDN dialog example with a deliberately planted fault, not a historical production bug. Run `python benchmarks/upstream.py` to reproduce it.
+
+## Observation reliability
+
+Run `ghostdiff doctor` after installation to verify Chromium launch. The current observation format preserves repeated text occurrences and records action availability changes. A journey with no supported observable effect is classified as `unobserved`, not verified. `--fail-on-change` returns 2 when no equivalent observable journey was found, even if there are no detected changes. Rerun comparison and freeze to migrate older contracts to observation revision 2.

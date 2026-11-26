@@ -20,7 +20,7 @@ def run(executable=None):
     observed={tuple(a["name"] for a in r["path"]):r["status"] for r in reports["planted"]["paths"]}
     checks=[{"journey":list(path),"expected":status,"actual":observed.get(path),"passed":observed.get(path)==status} for path,status in EXPECTED.items()]
     control=reports["clean"]["summary"]
-    bad=sum(v for k,v in control.items() if k not in ("inventory","equivalent_observed","inconclusive"))
+    bad=sum(v for k,v in control.items() if k not in ("inventory","equivalent_observed","unobserved","inconclusive"))
     inconclusive=sum(r["summary"].get("inconclusive",0) for r in reports.values())
     result={"kind":"synthetic planted fixtures, not real-world benchmark","checks":checks,"clean_false_differences":bad,"inconclusive_paths":inconclusive,"summaries":{k:v["summary"] for k,v in reports.items()}}
     result["passed"]=all(x["passed"] for x in checks) and bad==0 and inconclusive==0 and control.get("equivalent_observed",0)>0

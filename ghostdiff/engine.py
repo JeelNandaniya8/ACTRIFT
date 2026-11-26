@@ -31,15 +31,17 @@ class Settings:
         for name, low, high in (("depth", 1, 5), ("budget", 1, 200),
                                 ("settle_ms", 0, 5000), ("timeout_ms", 100, 15000),
                                 ("repeats", 2, 5)):
-            if not low <= getattr(self, name) <= high:
+            if type(getattr(self, name)) is not int or not low <= getattr(self, name) <= high:
                 raise ValueError(f"{name} must be between {low} and {high}")
 
 
 def origin(url: str) -> tuple:
+    if not isinstance(url, str) or any(ord(c) <= 32 or ord(c) == 127 for c in url):
+        raise ValueError("URL contains invalid whitespace or control characters")
     u = urlsplit(url)
-    if u.scheme not in ("http", "https") or u.username or u.password:
+    if u.scheme not in ("http", "https") or u.username is not None or u.password is not None or not u.hostname:
         raise ValueError("Only HTTP(S) URLs without credentials are supported")
-    return (u.scheme, u.hostname, u.port or (443 if u.scheme == "https" else 80))
+    return (u.scheme, u.hostname, u.port if u.port is not None else (443 if u.scheme == "https" else 80))
 
 
 def validate_url(url: str):
@@ -69,21 +71,43 @@ def available(page) -> list[Action]:
 
 
 def snapshot(page) -> dict:
-    lines = sorted(set(normal(x) for x in page.locator('body').inner_text().splitlines() if normal(x)))
+    raw = page.locator('body').inner_text()
+    if len(raw) > 65536:
+        raise ValueError("Page text exceeds observation limit (64 Ki characters)")
+    lines = sorted(normal(x) for x in raw.splitlines() if normal(x))
     u = urlsplit(page.url)
     return {"route": u.path + ("?" + u.query if u.query else "") + ("#" + u.fragment if u.fragment else ""),
             "text": lines, "actions": [asdict(a) for a in available(page)]}
 
 
 def delta(before, after, downloads):
-    return {"text_added": sorted(set(after['text']) - set(before['text'])),
-            "text_removed": sorted(set(before['text']) - set(after['text'])),
-            "route_change": after['route'] if before['route'] != after['route'] else None,
-            "downloads": downloads}
+    result = {"text_added": sorted((Counter(after['text']) - Counter(before['text'])).elements()),
+              "text_removed": sorted((Counter(before['text']) - Counter(after['text'])).elements()),
+              "route_change": after['route'] if before['route'] != after['route'] else None,
+              "downloads": downloads}
+    if "actions" in before and "actions" in after:
+        a = {Action(**x) for x in before["actions"]}
+        b = {Action(**x) for x in after["actions"]}
+        result["actions_added"] = [asdict(x) for x in sorted(b-a)]
+        result["actions_removed"] = [asdict(x) for x in sorted(a-b)]
+    return result
+
+
+def has_signal(outcome):
+    return any(outcome.get(key) for key in ("text_added", "text_removed", "route_change", "downloads", "actions_added", "actions_removed"))
+
+
+def validate_path(path, cfg):
+    if len(path) > cfg.depth:
+        raise ValueError("Journey exceeds configured depth")
+    for a in path:
+        if a.role not in ("button", "link", "reload") or not isinstance(a.name, str) or not 1 <= len(a.name) <= 120:
+            raise ValueError("Unsupported action in journey")
 
 
 def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settings) -> dict:
     """Every path starts in a fresh browser context; no real user session is used."""
+    validate_path(path, cfg)
     context = browser.new_context(accept_downloads=True, service_workers="block")
     allowed = origin(url)
     blocked = []
@@ -123,12 +147,16 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
         page.wait_for_timeout(cfg.settle_ms)
         if blocked:
             return {"status":"inconclusive", "reason":"Network policy blocked initial request", "steps":steps, "blocked":blocked}
+        if len(pages) != 1 or origin(page.url) != allowed:
+            return {"status":"inconclusive", "reason":"Unexpected initial navigation or popup", "steps":steps}
         initial = snapshot(page)
         previous = initial
         for i, action in enumerate(path):
             downloads.clear()
             if action.role == 'reload':
-                page.reload(wait_until='domcontentloaded', timeout=cfg.timeout_ms)
+                response = page.reload(wait_until='domcontentloaded', timeout=cfg.timeout_ms)
+                if response is None or not response.ok:
+                    return {"status":"inconclusive", "reason":"Reload HTTP response failed", "steps":steps}
             else:
                 locator = page.get_by_role(action.role, name=action.name, exact=True)
                 count = locator.count()
@@ -142,12 +170,13 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
                 return {"status":"inconclusive", "reason":"Popup navigation unsupported", "steps":steps, "blocked":blocked}
             if blocked:
                 return {"status":"inconclusive", "reason":"Network policy blocked a request", "steps":steps, "blocked":blocked}
+            if origin(page.url) != allowed:
+                return {"status":"inconclusive", "reason":"Navigation left the authorized origin", "steps":steps}
             current = snapshot(page)
             files = []
             for item in downloads:
                 if item.failure():
-                    files.append({"name":item.suggested_filename,"error":"download failed"})
-                    continue
+                    return {"status":"inconclusive", "reason":"Download did not complete", "steps":steps}
                 p = Path(item.path())
                 size = p.stat().st_size
                 if size > 10 * 1024 * 1024:
@@ -160,10 +189,13 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
         if blocked:
             return {"status":"inconclusive", "reason":"Network policy blocked a request", "steps":steps, "blocked":blocked}
         return {"status":"ok", "initial":initial, "final":previous, "steps":steps}
-    except (Error, OSError) as exc:
+    except (Error, OSError, ValueError) as exc:
         return {"status":"inconclusive", "reason":str(exc).splitlines()[0][:350], "steps":steps, "blocked":blocked}
     finally:
-        context.close()
+        try:
+            context.close()
+        except Error:
+            pass
 
 
 def signature(result: dict) -> str:
@@ -173,6 +205,8 @@ def signature(result: dict) -> str:
 
 
 def compare_path(before, after):
+    if len(before) < 2 or len(after) < 2:
+        return 'inconclusive', 'At least two observations per version are required'
     if len({signature(r) for r in before}) != 1 or len({signature(r) for r in after}) != 1:
         return 'inconclusive', 'Observed behavior varied across repeated runs'
     a,b = before[0],after[0]
@@ -186,6 +220,8 @@ def compare_path(before, after):
     if not aout and not bout:
         return 'inventory', 'Initial accessible-action inventory; no action executed'
     if aout == bout:
+        if not any(has_signal(o) for o in aout):
+            return 'unobserved','Both paths executed, but neither produced a supported observable change'
         return 'equivalent_observed','Repeated observable action outcomes matched'
     if any(x['downloads'] != y['downloads'] for x,y in zip(aout,bout)):
         return 'download_changed','Download occurrence, name, size or bytes differ; inspect intent'
@@ -228,12 +264,13 @@ def compare(before_url: str, after_url: str, cfg: Settings) -> dict:
         finally:
             browser.close()
     return {"schema":"ghostdiff.evidence/v1","before_url":before_url,"after_url":after_url,
-            "settings":asdict(cfg),"summary":dict(Counter(r['status'] for r in rows)),"candidate_only_actions":candidate_only,
+            "observation_revision":2,"settings":asdict(cfg),"summary":dict(Counter(r['status'] for r in rows)),"candidate_only_actions":candidate_only,
             "paths":rows,"coverage":{"executed_paths":len(rows),"path_budget":cfg.budget,"depth_limit":cfg.depth,"budget_reached":len(rows)>=cfg.budget},"limits":"Bounded baseline exploration without state pruning; exact accessible names; observed deltas, not proof of functional equivalence."}
 
 
 def replay(before_url, after_url, path, cfg):
     cfg.validate(); validate_url(before_url); validate_url(after_url)
+    validate_path(path,cfg)
     with sync_playwright() as p:
         browser=p.chromium.launch(headless=True, **({'executable_path':cfg.executable} if cfg.executable else {}))
         try:

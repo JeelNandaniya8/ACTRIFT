@@ -11,7 +11,7 @@ def fixture():
     run={"status":"ok","initial":snap,"final":snap,"steps":[{"action":a,"outcome":o}]}
     root={"path":[],"status":"inventory","reason":"root","before":[run,run],"after":[run,run]}
     row={"path":[a],"status":"download_changed","reason":"changed","before":[run,run],"after":[run,run]}
-    return {"schema":"ghostdiff.evidence/v1","settings":asdict(Settings()),"paths":[root,row],"summary":{"inventory":1,"download_changed":1},"limits":"test"},run
+    return {"schema":"ghostdiff.evidence/v1","observation_revision":2,"settings":asdict(Settings()),"paths":[root,row],"summary":{"inventory":1,"download_changed":1},"limits":"test"},run
 
 class ContractTests(unittest.TestCase):
     def test_freeze_and_match(self):

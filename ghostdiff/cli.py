@@ -4,6 +4,7 @@ import html
 import json
 from pathlib import Path
 import sys
+from playwright.sync_api import Error as BrowserError
 from .engine import Action, Settings, compare, replay
 from .demo import app, serve
 from .contracts import freeze, verify, generate_test
@@ -49,6 +50,7 @@ def main(argv=None):
             p.add_argument("--fail-on-change",action="store_true")
         else:
             p.add_argument("--clean",action="store_true")
+    sub.add_parser("doctor",help="Check browser installation and launch")
     p=sub.add_parser("replay")
     p.add_argument("evidence")
     p.add_argument("--index",type=int,required=True)
@@ -63,6 +65,16 @@ def main(argv=None):
     p.add_argument("contracts"); p.add_argument("--target",required=True); p.add_argument("--allow-actions",action="store_true"); p.add_argument("--browser-executable"); p.add_argument("--out",default="verification.json")
     a=parser.parse_args(argv)
     try:
+        if a.command=="doctor":
+            from playwright.sync_api import sync_playwright
+            from . import __version__
+            with sync_playwright() as p:
+                browser=p.chromium.launch(headless=True)
+                try:
+                    print(f"GHOSTDIFF {__version__}; Chromium {browser.version}; browser launch OK")
+                finally:
+                    browser.close()
+            return 0
         if a.command=="freeze":
             data=freeze(json.loads(Path(a.evidence).read_text(encoding="utf-8")))
             Path(a.out).write_text(json.dumps(data,indent=2),encoding="utf-8")
@@ -97,7 +109,15 @@ def main(argv=None):
         if getattr(a,"fail_on_change",False):
             if report["summary"].get("inconclusive"): return 2
             if any(report["summary"].get(k) for k in ("unmatched","behavior_changed","download_changed")): return 1
+            if not report["summary"].get("equivalent_observed"): return 2
         return 0
-    except (ValueError,OSError,KeyError,IndexError,TypeError) as exc:
+    except KeyboardInterrupt:
+        print("ghostdiff: interrupted; no complete result",file=sys.stderr)
+        return 130
+    except BrowserError as exc:
+        print(f"ghostdiff: browser unavailable or failed: {str(exc).splitlines()[0]}",file=sys.stderr)
+        print("Try: python -m playwright install chromium; ghostdiff doctor",file=sys.stderr)
+        return 2
+    except (ValueError,OSError,KeyError,IndexError,TypeError,AttributeError) as exc:
         print(f"ghostdiff: {exc}",file=sys.stderr)
         return 2

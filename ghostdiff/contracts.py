@@ -4,7 +4,7 @@ from dataclasses import asdict, replace
 from hashlib import sha256
 
 from playwright.sync_api import sync_playwright
-from .engine import Action, Settings, experiment, signature, stable_json, validate_url
+from .engine import Action, Settings, experiment, signature, stable_json, validate_url, has_signal
 
 
 def outcomes(result):
@@ -14,6 +14,8 @@ def outcomes(result):
 def freeze(evidence):
     if evidence.get("schema") != "ghostdiff.evidence/v1":
         raise ValueError("Unsupported evidence schema")
+    if evidence.get("observation_revision") != 2:
+        raise ValueError("Evidence uses an older observation format; rerun compare before freezing")
     cfg = Settings(**evidence["settings"])
     cfg.validate()
     if cfg.allow_writes:
@@ -27,13 +29,13 @@ def freeze(evidence):
         if len({signature(r) for r in runs}) != 1:
             continue
         expected = outcomes(runs[0])
-        if not any(o["text_added"] or o["text_removed"] or o["route_change"] or o["downloads"] for o in expected):
+        if not any(has_signal(o) for o in expected):
             continue
         key = sha256(stable_json(path).encode()).hexdigest()[:16]
         contracts.append({"id":key,"path":path,"expected":expected})
     if not contracts:
         raise ValueError("No stable, observable baseline journeys to protect")
-    return {"schema":"ghostdiff.contracts/v1","settings":asdict(replace(cfg, executable=None)),
+    return {"schema":"ghostdiff.contracts/v1","observation_revision":2,"settings":asdict(replace(cfg, executable=None)),
             "contracts":contracts,"limits":"Exact action names and observed outcomes only. Not a correctness specification."}
 
 
@@ -52,6 +54,8 @@ def verify(data, target, executable=None):
     validate_url(target)
     if data.get("schema")!="ghostdiff.contracts/v1":
         raise ValueError("Unsupported contract schema")
+    if data.get("observation_revision") != 2:
+        raise ValueError("Contract observation format changed; rerun compare and freeze")
     cfg=replace(Settings(**data["settings"]),allow_writes=False,executable=executable)
     cfg.validate()
     contracts=data["contracts"]

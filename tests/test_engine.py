@@ -22,7 +22,7 @@ class UnitTests(unittest.TestCase):
         x={"text_added":[],"text_removed":[],"route_change":None,"downloads":[]}
         y={**x,"downloads":[{"name":"report.pdf"}]}
         z={**x,"text_added":["changed"]}
-        for a,b,status in [(x,x,"equivalent_observed"),(x,y,"download_changed"),(x,z,"behavior_changed")]:
+        for a,b,status in [(z,z,"equivalent_observed"),(x,y,"download_changed"),(x,z,"behavior_changed")]:
             self.assertEqual(compare_path([sample(a)]*2,[sample(b)]*2)[0],status)
         self.assertEqual(compare_path([sample(x)]*2,[sample(y),sample(z)])[0],"inconclusive")
     def test_pdf_fixture(self):
@@ -42,4 +42,35 @@ class BrowserTests(unittest.TestCase):
     def test_clean(self):
         report=self.compare_demo(False)
         self.assertGreater(report["summary"].get("equivalent_observed",0),0)
-        self.assertEqual(set(report["summary"])-{"inventory","equivalent_observed"},set())
+        self.assertEqual(set(report["summary"])-{"inventory","equivalent_observed","unobserved"},set())
+
+
+class ReliabilityTests(unittest.TestCase):
+    def test_duplicate_text(self):
+        before={"text":["item"],"route":"/"}
+        after={"text":["item","item"],"route":"/"}
+        self.assertEqual(delta(before,after,[])["text_added"],["item"])
+        self.assertEqual(delta(after,before,[])["text_removed"],["item"])
+
+    def test_action_availability(self):
+        a={"role":"button","name":"Next"}
+        before={"text":[],"route":"/","actions":[]}
+        after={"text":[],"route":"/","actions":[a]}
+        self.assertEqual(delta(before,after,[])["actions_added"],[a])
+        self.assertEqual(delta(after,before,[])["actions_removed"],[a])
+
+    def test_no_observable_effect(self):
+        x={"text_added":[],"text_removed":[],"route_change":None,"downloads":[]}
+        self.assertEqual(compare_path([sample(x)]*2,[sample(x)]*2)[0],"unobserved")
+
+    def test_insufficient_observations(self):
+        self.assertEqual(compare_path([],[])[0],"inconclusive")
+        self.assertEqual(compare_path([sample()],[sample()])[0],"inconclusive")
+
+    def test_invalid_settings(self):
+        for cfg in [Settings(depth=True),Settings(budget=3.5)]:
+            with self.assertRaises(ValueError): cfg.validate()
+
+    def test_invalid_urls(self):
+        for url in ["http://@localhost","http://localhost\n","http://localhost:bad"]:
+            with self.assertRaises(ValueError): validate_url(url)

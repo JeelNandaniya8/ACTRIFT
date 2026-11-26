@@ -19,7 +19,7 @@ def run(executable=None):
     paths={tuple(x["name"] for x in row["path"]):row["status"] for row in report["paths"]}
     observed=paths.get(("Update details",))
     control=clean["summary"]
-    passed=observed=="behavior_changed" and control.get("equivalent_observed",0)>0 and set(control)<={"inventory","equivalent_observed"} and not report["summary"].get("inconclusive")
+    passed=observed=="behavior_changed" and control.get("equivalent_observed",0)>0 and set(control)<={"inventory","equivalent_observed","unobserved"} and not report["summary"].get("inconclusive")
     return {"kind":"external open-source example with planted regression","upstream_commit":"1fa1a3babb9075b7c46c8f8eb8addecdf8d9166e","expected":"behavior_changed","actual":observed,"passed":passed,"mutant_summary":report["summary"],"clean_summary":control}
 
 if __name__=="__main__":

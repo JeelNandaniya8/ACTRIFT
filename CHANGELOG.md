@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Preserve duplicate text occurrences and record action availability changes.
+- Mark no-effect journeys unobserved instead of equivalent; reject incompatible observation revisions.
+- Handle missing browser, interruption, failed reload/download, invalid settings and off-origin navigation conservatively.
+- Add browser installation doctor and targeted reliability tests.
+
 - Added stable baseline contracts, candidate-only verification and generated unittest scripts.
 - Added standalone interactive behavioral journey observatory.
 - Added synthetic regression benchmark and CI evidence artifacts.
