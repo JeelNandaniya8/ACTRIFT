@@ -20,3 +20,5 @@ Static Git snapshot automation, context-aware matching and source hunk correlati
 Reviewed JSON config, optional reverse exploration, native checkbox/select/key operations and macOS/Windows Chromium smoke gates have initial implementations. Full candidate graph exploration, backend provisioning/reset and additional interaction types remain open.
 
 An explicit disposable backend reset protocol and SQLite integration cases are implemented experimentally. Generic backend provisioning and authenticated reset-dependent contracts remain unsupported.
+
+Explicit bounded JSON API observation and offline fingerprint history are implemented experimentally. Full API semantics, durable history storage and production validation remain open.

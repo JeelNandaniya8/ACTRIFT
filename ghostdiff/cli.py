@@ -18,6 +18,7 @@ from .bisect import bisect
 from .gitintel import git_bisect
 from .sourceintel import localize
 from .config import parse_config
+from .history import timeline
 
 def report_html(report):
     escape = lambda x: html.escape(str(x))
@@ -59,6 +60,7 @@ def main(argv=None):
         p.add_argument("--summary-only",action="store_true",help="Suppress observed action names in console output")
         p.add_argument("--ignore",action="append",default=[],help="Comma-separated exact action names to skip; repeatable")
         p.add_argument("--mask-text",action="append",default=[],help="CSS selector to exclude from text observations; repeatable")
+        p.add_argument("--observe-api",action="append",default=[],help="Exact local JSON API path to observe; repeatable, synthetic data only")
         p.add_argument("--screenshots",action="store_true",help="Capture viewport images; may contain sensitive data")
         p.add_argument("--allow-risky-actions",action="store_true",help="Disable heuristic risky-name filter; only isolated disposable apps")
         if name=="compare":
@@ -109,6 +111,8 @@ def main(argv=None):
     p.add_argument("evidence");p.add_argument("--repo",required=True);p.add_argument("--good",required=True);p.add_argument("--bad",required=True);p.add_argument("--out")
     p=sub.add_parser("compare-config",help="Compare local versions using reviewed JSON settings")
     p.add_argument("config");p.add_argument("--allow-actions",action="store_true");p.add_argument("--out",default="ghostdiff-report")
+    p=sub.add_parser("timeline",help="Compare scoped fingerprints in an ordered local history")
+    p.add_argument("manifest");p.add_argument("--out")
     a=parser.parse_args(argv)
     try:
         if a.command=="compare-config":
@@ -123,6 +127,20 @@ def main(argv=None):
                 (Path(a.out)/"rename-hypotheses.json").write_text(json.dumps(hypotheses,indent=2),encoding="utf-8")
             # New candidate actions are reported in reverse evidence, not used as baseline failures.
             return exit_code(forward,strict=strict)
+        if a.command=="timeline":
+            manifest=json.loads(Path(a.manifest).read_text(encoding="utf-8"))
+            if not isinstance(manifest,dict) or set(manifest)!={"schema","revisions"} or manifest["schema"]!="ghostdiff.timeline-input/v1":
+                raise ValueError("Unsupported timeline manifest")
+            entries=[]
+            for item in manifest["revisions"]:
+                if set(item)!={"revision","evidence","side"}:raise ValueError("Invalid timeline entry")
+                path=Path(a.manifest).resolve().parent/item["evidence"]
+                entries.append((item["revision"],json.loads(path.read_text(encoding="utf-8")),item["side"]))
+            result=timeline(entries)
+            encoded=json.dumps(result,indent=2,ensure_ascii=False)
+            if a.out:Path(a.out).write_text(encoded,encoding="utf-8")
+            else:print(encoded)
+            return 0
         if a.command in ("fingerprint","match","diagnose","bisect","git-bisect","localize"):
             def load(path):return json.loads(Path(path).read_text(encoding="utf-8"))
             if a.command=="fingerprint": result=fingerprint(load(a.evidence),a.side)
@@ -191,7 +209,7 @@ def main(argv=None):
             result=replay(a.before,a.after,tuple(Action(**x) for x in row["path"]),Settings(**settings),a.before_state,a.after_state)
             print(json.dumps(result,indent=2,ensure_ascii=False))
             return 2 if result["status"]=="inconclusive" else 0
-        cfg=Settings(depth=a.depth,budget=a.budget,settle_ms=a.settle_ms,timeout_ms=a.timeout_ms,repeats=a.repeats,allow_writes=getattr(a,"allow_writes",False),executable=a.browser_executable,browser=a.browser,ignore=tuple(x.strip() for entry in a.ignore for x in entry.split(",") if x.strip()),mask_text=tuple(a.mask_text),screenshots=a.screenshots,allow_risky_actions=a.allow_risky_actions,parallel=a.parallel)
+        cfg=Settings(depth=a.depth,budget=a.budget,settle_ms=a.settle_ms,timeout_ms=a.timeout_ms,repeats=a.repeats,allow_writes=getattr(a,"allow_writes",False),executable=a.browser_executable,browser=a.browser,ignore=tuple(x.strip() for entry in a.ignore for x in entry.split(",") if x.strip()),mask_text=tuple(a.mask_text),screenshots=a.screenshots,allow_risky_actions=a.allow_risky_actions,parallel=a.parallel,api_paths=tuple(a.observe_api))
         if a.command=="demo":
             with serve(app()) as before, serve(app(broken=not a.clean,redesign=True)) as after:
                 report=compare(before,after,cfg)

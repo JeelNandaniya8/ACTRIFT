@@ -1,6 +1,6 @@
 """Explicit, non-executable JSON configuration for read-policy comparisons."""
 from .engine import Settings,validate_url
-ALLOWED={"depth","budget","settle_ms","timeout_ms","repeats","browser","ignore","mask_text","screenshots","parallel"}
+ALLOWED={"depth","budget","settle_ms","timeout_ms","repeats","browser","ignore","mask_text","screenshots","parallel","api_paths"}
 def parse_config(data):
     if not isinstance(data,dict) or set(data)!={"schema","before","after","settings","bidirectional","strict"} or data["schema"]!="ghostdiff.config/v1":
         raise ValueError("Unsupported comparison configuration")

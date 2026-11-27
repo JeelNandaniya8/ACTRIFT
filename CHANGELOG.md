@@ -2,6 +2,8 @@
 
 ## 0.7.0 — Git and context intelligence preview
 
+- Add explicitly selected JSON API response digests and offline scoped fingerprint timelines.
+
 - Add opt-in fixed-endpoint backend reset and stateful SQLite integration coverage.
 
 - Add reviewed JSON compare configuration, optional reverse exploration, explicit native form controls and cross-platform Chromium smoke gates.

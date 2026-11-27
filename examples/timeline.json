@@ -1,0 +1,15 @@
+{
+  "schema": "ghostdiff.timeline-input/v1",
+  "revisions": [
+    {
+      "revision": "v1",
+      "evidence": "../report-v1/evidence.json",
+      "side": "before"
+    },
+    {
+      "revision": "v2",
+      "evidence": "../report-v2/evidence.json",
+      "side": "after"
+    }
+  ]
+}

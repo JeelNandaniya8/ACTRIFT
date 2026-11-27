@@ -66,3 +66,5 @@ New experimental commands: `ghostdiff git-bisect` provisions trusted local stati
 Use `ghostdiff compare-config examples/compare.json --allow-actions` with reviewed local URLs for repeatable configuration and optional reverse (candidate-side) exploration. Explicit journeys support native checkbox, single-select and Enter/Escape actions. macOS and Windows Chromium smoke checks are included in CI. These are not full platform or arbitrary interaction coverage.
 
 For stateful disposable local fixtures, explicitly enable the [backend reset protocol](docs/backend-reset.md) with `--reset-backend`. It requires a dedicated fixture-only endpoint and independent servers, and is not a general database reset mechanism.
+
+Explicit JSON API comparison: `--observe-api /api/items` records bounded response status and digest evidence for selected local synthetic endpoints. See [API observation](docs/api-observation.md). `ghostdiff timeline examples/timeline.json` combines saved fingerprints across operator-supplied revisions; different scopes are marked incomparable.

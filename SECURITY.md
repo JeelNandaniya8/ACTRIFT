@@ -19,3 +19,5 @@ Automated security CI uses pip-audit for known dependency vulnerabilities and Ba
 Observation resource limits: 5,000 candidate DOM elements, 256 unique named actions, 20 sampled errors per type, 8 download events and 20 MiB aggregate download hashing per step. Exceeding relevant limits yields inconclusive rather than verified results. These are bounded observation safeguards, not network, disk, memory or process isolation; downloads may already have consumed disk before checks, and an application can still exhaust browser resources. Run in disposable OS-level isolation.
 
 The optional reset protocol intentionally sends a POST to a fixed endpoint on explicitly authorized numeric-loopback HTTP test servers. It does not follow redirects, requires a 204 receipt, and is disabled by default. Never enable it on production infrastructure. See docs/backend-reset.md.
+
+API digest collection is opt-in and limited to explicitly selected local synthetic paths. Digests are not encryption or anonymization; browser response retrieval is not a network/resource sandbox. Never select real customer or credential-bearing endpoints.

@@ -16,7 +16,7 @@ def diagnose(report):
                 old,new=x["outcome"],y["outcome"]
                 if old!=new:
                     keys=sorted(k for k in old.keys()|new.keys() if stable_json(old.get(k))!=stable_json(new.get(k)))
-                    first={"step":i+1,"action":row["path"][i],"changed_fields":keys,"http_errors":new.get("http_errors",[]),"javascript_errors":new.get("page_errors",[]),"source_locations":new.get("source_locations",[]),"baseline_downloads":old.get("downloads",[]),"candidate_downloads":new.get("downloads",[])}
+                    first={"step":i+1,"action":row["path"][i],"changed_fields":keys,"http_errors":new.get("http_errors",[]),"javascript_errors":new.get("page_errors",[]),"source_locations":new.get("source_locations",[]),"baseline_api":old.get("api_responses",[]),"candidate_api":new.get("api_responses",[]),"baseline_downloads":old.get("downloads",[]),"candidate_downloads":new.get("downloads",[])}
                     break
             if first is None and b.get("status")=="unmatched":
                 i=b.get("at")

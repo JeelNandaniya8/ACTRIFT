@@ -38,7 +38,7 @@ def fingerprint(evidence,side="before"):
     stable,excluded=observations(evidence,side)
     if not stable: raise ValueError("No stable observable paths to fingerprint")
     cfg=Settings(**evidence["settings"])
-    policy={k:getattr(cfg,k) for k in ("browser","depth","budget","repeats","settle_ms","timeout_ms","ignore","mask_text","allow_writes","allow_risky_actions")}
+    policy={k:getattr(cfg,k) for k in ("browser","depth","budget","repeats","settle_ms","timeout_ms","ignore","mask_text","allow_writes","allow_risky_actions","api_paths")}
     scope={"observation_revision":3,"policy":policy,"paths":[r["path"] for r in stable],"authenticated":bool(evidence.get("authenticated_baseline" if side=="before" else "authenticated_candidate")),"backend_reset":bool(evidence.get("backend_reset"))}
     return {"schema":"ghostdiff.fingerprint/v1","scope_sha256":digest(scope),"behavior_sha256":digest(stable),"observed_paths":len(stable),"excluded_paths":excluded,"coverage":evidence.get("coverage",{}),"limits":"Digest of stable observed deltas only; compare only matching scope hashes and review exclusions. Not an identity, signature, or correctness proof."}
 
@@ -47,7 +47,7 @@ def behavior_similarity(a,b):
     if a==b:return "exact",1.0,["exact observed outcome"]
     strong=[k for k in ("route_change","downloads","actions_added","actions_removed") if a.get(k) and a.get(k)==b.get(k)]
     # Contradictory route/download behavior must not become a proposed match.
-    if any(a.get(k)!=b.get(k) for k in ("route_change","downloads")):return None
+    if any(a.get(k)!=b.get(k) for k in ("route_change","downloads","api_responses")):return None
     if not strong:return None
     def words(o,key):
         return set(normalized(" ".join(o.get(key,[]))))

@@ -17,6 +17,7 @@ from playwright.sync_api import Browser, Error, sync_playwright
 from .matching import suggestions
 from .session import local_storage_state
 from .reset import reset_target,reset_backend
+from .api_observe import validate_paths,observe_response
 
 
 @dataclass(frozen=True, order=True)
@@ -40,8 +41,10 @@ class Settings:
     screenshots: bool = False
     allow_risky_actions: bool = False
     parallel: bool = False
+    api_paths: tuple[str, ...] = ()
 
     def validate(self):
+        validate_paths(self.api_paths)
         if self.browser not in ('chromium', 'firefox', 'webkit'):
             raise ValueError('Unsupported browser engine')
         if self.executable is not None and not isinstance(self.executable, str):
@@ -163,7 +166,7 @@ def delta(before, after, downloads):
 
 
 def has_signal(outcome):
-    return any(outcome.get(key) for key in ("text_added", "text_removed", "route_change", "downloads", "actions_added", "actions_removed", "page_errors", "http_errors", "control_change"))
+    return any(outcome.get(key) for key in ("text_added", "text_removed", "route_change", "downloads", "actions_added", "actions_removed", "page_errors", "http_errors", "control_change", "api_responses"))
 
 
 def http_failure(resource_type, status):
@@ -238,6 +241,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
     downloads = BoundedEvents(8)
     page_errors = BoundedEvents(20)
     http_errors = BoundedEvents(20)
+    api_pending = BoundedEvents(20)
     error_locations = BoundedEvents(100)
     pages = BoundedEvents(2)
     steps = []
@@ -268,6 +272,8 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
         if not same_origin:
             blocked.append("Unexpected off-origin HTTP response")
         kind=response.request.resource_type
+        if same_origin and kind in ("fetch","xhr") and urlsplit(response.url).path in cfg.api_paths:
+            api_pending.append(response)
         if http_failure(kind,response.status):
             # Do not retain query strings, request bodies, headers or credentials.
             http_errors.append({"resource":kind,"status":response.status,"path":urlsplit(response.url).path[:300]})
@@ -308,6 +314,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
             downloads.clear()
             page_errors.clear()
             http_errors.clear()
+            api_pending.clear()
             error_locations.clear()
             control_change=None
             if action.role == 'reload':
@@ -357,6 +364,16 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
             if origin(page.url) != allowed:
                 return {"status":"inconclusive", "reason":"Navigation left the authorized origin", "steps":steps}
             current = snapshot(page,cfg)
+            if api_pending.overflow:
+                return {"status":"inconclusive","reason":"Selected API observation limit exceeded","steps":steps}
+            api_results=[]
+            try:
+                for response in api_pending[:]:
+                    api_results.append(observe_response(response,urlsplit(response.url).path))
+            except (ValueError,UnicodeError,RecursionError,Error):
+                return {"status":"inconclusive","reason":"Selected API response could not be safely observed","steps":steps}
+            if len(api_pending)!=len(api_results) or api_pending.overflow:
+                return {"status":"inconclusive","reason":"Selected API observations changed during collection","steps":steps}
             if any(x.overflow for x in (downloads,page_errors,http_errors)):
                 return {"status":"inconclusive","reason":"Browser event observation limit exceeded","steps":steps}
             files = []
@@ -377,6 +394,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
             if any(x.overflow for x in (downloads,page_errors,http_errors)):
                 return {"status":"inconclusive","reason":"Browser event observation limit exceeded","steps":steps}
             outcome=delta(previous,current,files)
+            if api_results:outcome["api_responses"]=sorted(api_results,key=stable_json)
             if control_change is not None:outcome["control_change"]=control_change
             outcome["page_errors"]=sorted(page_errors[:20])
             if error_locations:outcome["source_locations"]=sorted(error_locations,key=stable_json)
