@@ -1,0 +1,42 @@
+{
+  "name": "ghostdiff-evidence",
+  "displayName": "GHOSTDIFF Evidence",
+  "description": "Inspect local behavioral regression evidence without executing browser actions.",
+  "version": "0.1.0",
+  "publisher": "JeelNandaniya8",
+  "license": "Apache-2.0",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Testing",
+    "Other"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/JeelNandaniya8/GHOSTDIFF.git"
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onCommand:ghostdiff.openEvidence"
+  ],
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false
+    },
+    "virtualWorkspaces": {
+      "supported": false
+    }
+  },
+  "contributes": {
+    "commands": [
+      {
+        "command": "ghostdiff.openEvidence",
+        "title": "GHOSTDIFF: Inspect Local Evidence"
+      }
+    ]
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  }
+}

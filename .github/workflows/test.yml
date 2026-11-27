@@ -184,8 +184,22 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install '.[mcp]'
       - run: python tests/mcp_smoke.py
+  editor-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm test
+        working-directory: vscode
+      - uses: actions/upload-artifact@v4
+        with:
+          name: vscode-extension-source
+          path: vscode/
   package-preview:
-    needs: [test, cross-browser, isolated-demo, action-smoke, scalability, platform-smoke, mcp-smoke]
+    needs: [test, cross-browser, isolated-demo, action-smoke, scalability, platform-smoke, mcp-smoke, editor-smoke]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

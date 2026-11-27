@@ -22,3 +22,5 @@ PyPI trusted publishing is prepared via the maintainer-controlled workflow. See 
 Network-disabled, mount-free static bundle comparison is implemented experimentally; arbitrary build provisioning and audited isolation remain open.
 
 Checksum-bound prebuilt frontend provisioning and artifact bisection are implemented experimentally. Arbitrary source builds and backend provisioning remain open.
+
+The VS Code read-only evidence extension has an initial implementation and Node unit tests. Extension-host validation, VSIX packaging and Marketplace publication remain open.

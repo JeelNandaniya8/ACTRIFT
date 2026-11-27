@@ -2,6 +2,8 @@
 
 ## 0.7.0 — Git and context intelligence preview
 
+- Add read-only VS Code development extension for strict evidence inspection and Node CI tests.
+
 - Add checksum-bound prebuilt frontend artifact provisioning and regression bisection.
 
 - Add mount-free static fixture interchange for the isolated Docker runner and literal Git diff paths.

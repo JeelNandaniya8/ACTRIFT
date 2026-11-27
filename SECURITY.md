@@ -27,3 +27,5 @@ Agent summaries exclude observed strings, paths, URLs, screenshots, response dig
 The static bundle runner accepts explicitly packed synthetic assets through stdin and serves both versions in memory. Its documented network-disabled Docker recipe requires no host mounts or credentials. The packer assumes trusted directories and does not detect secrets in permitted file contents. The Python module alone provides no OS isolation; the container remains an unaudited defense-in-depth measure.
 
 Build-artifact provisioning accepts only reviewed adjacent static artifact files with explicit digests and commit labels. Digests verify bytes, not build provenance; no repository scripts are executed. Use trusted build outputs and synthetic data, not production artifacts or secrets.
+
+The editor integration reads only an explicitly selected local evidence file in a trusted workspace, capped at 32 MiB. It outputs fixed data-minimized fields and does not invoke shell commands, browser actions or external URLs. It is not a provenance verifier or independently audited.
