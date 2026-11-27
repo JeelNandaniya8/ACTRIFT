@@ -19,6 +19,8 @@ from .gitintel import git_bisect
 from .sourceintel import localize
 from .config import parse_config
 from .history import timeline
+from .history_store import record,history
+from .sourcemap import load_maps
 from .agent import summarize as agent_summary
 
 def report_html(report):
@@ -111,7 +113,7 @@ def main(argv=None):
     p=sub.add_parser("git-bisect",help="Automatically serve and test local static Git revisions")
     p.add_argument("repo");p.add_argument("--good",required=True);p.add_argument("--bad",required=True);p.add_argument("--site",default=".");p.add_argument("--contracts");p.add_argument("--allow-actions",action="store_true");p.add_argument("--exhaustive",action="store_true");p.add_argument("--out")
     p=sub.add_parser("localize",help="Correlate observed divergence with changed Git source hunks")
-    p.add_argument("evidence");p.add_argument("--repo",required=True);p.add_argument("--good",required=True);p.add_argument("--bad",required=True);p.add_argument("--out")
+    p.add_argument("evidence");p.add_argument("--repo",required=True);p.add_argument("--good",required=True);p.add_argument("--bad",required=True);p.add_argument("--source-maps");p.add_argument("--out")
     p=sub.add_parser("compare-config",help="Compare local versions using reviewed JSON settings")
     p.add_argument("config");p.add_argument("--allow-actions",action="store_true");p.add_argument("--out",default="ghostdiff-report")
     p=sub.add_parser("timeline",help="Compare scoped fingerprints in an ordered local history")
@@ -120,6 +122,10 @@ def main(argv=None):
     p.add_argument("evidence");p.add_argument("--strict",action="store_true")
     p=sub.add_parser("agent-run",help="Run an explicitly authorized local comparison and emit JSON only")
     p.add_argument("config");p.add_argument("--allow-actions",action="store_true");p.add_argument("--evidence-out")
+    p=sub.add_parser("history-record",help="Append a scoped fingerprint to local SQLite history")
+    p.add_argument("evidence");p.add_argument("--db",required=True);p.add_argument("--project",required=True);p.add_argument("--revision",required=True);p.add_argument("--side",choices=("before","after"),default="before")
+    p=sub.add_parser("history-show",help="Read local scoped fingerprint history")
+    p.add_argument("--db",required=True);p.add_argument("--project",required=True);p.add_argument("--limit",type=int,default=100)
     a=parser.parse_args(argv)
     if a.command in ("agent-summary","agent-run"):
         try:
@@ -160,6 +166,10 @@ def main(argv=None):
                 (Path(a.out)/"rename-hypotheses.json").write_text(json.dumps(hypotheses,indent=2),encoding="utf-8")
             # New candidate actions are reported in reverse evidence, not used as baseline failures.
             return exit_code(forward,strict=strict)
+        if a.command in ("history-record","history-show"):
+            result=record(a.db,a.project,a.revision,json.loads(Path(a.evidence).read_text(encoding="utf-8")),a.side) if a.command=="history-record" else history(a.db,a.project,a.limit)
+            print(json.dumps(result,indent=2))
+            return 0
         if a.command=="timeline":
             manifest=json.loads(Path(a.manifest).read_text(encoding="utf-8"))
             if not isinstance(manifest,dict) or set(manifest)!={"schema","revisions"} or manifest["schema"]!="ghostdiff.timeline-input/v1":
@@ -179,7 +189,7 @@ def main(argv=None):
             if a.command=="fingerprint": result=fingerprint(load(a.evidence),a.side)
             elif a.command=="match": result=match_renames(load(a.forward),load(a.reverse))
             elif a.command=="diagnose": result=diagnose(load(a.evidence))
-            elif a.command=="localize": result=localize(a.repo,a.good,a.bad,load(a.evidence))
+            elif a.command=="localize": result=localize(a.repo,a.good,a.bad,load(a.evidence),load_maps(a.source_maps) if a.source_maps else None)
             elif a.command=="git-bisect":
                 if not a.allow_actions:parser.error("git-bisect requires --allow-actions")
                 result=git_bisect(a.repo,a.good,a.bad,a.site,load(a.contracts) if a.contracts else None,a.exhaustive)

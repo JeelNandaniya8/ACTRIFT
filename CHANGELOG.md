@@ -2,6 +2,8 @@
 
 ## 0.7.0 — Git and context intelligence preview
 
+- Add optional read-only MCP stdio server, persistent SQLite fingerprint history and explicit offline source-map decoding.
+
 - Add data-minimized agent summaries and an explicitly authorized JSON-only comparison command.
 
 - Reject unfinished selected API responses and unhealthy baseline paths; add searchable Observatory reports and diagnostic export.

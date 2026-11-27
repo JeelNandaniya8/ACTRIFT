@@ -24,3 +24,5 @@ An explicit disposable backend reset protocol and SQLite integration cases are i
 Explicit bounded JSON API observation and offline fingerprint history are implemented experimentally. Full API semantics, durable history storage and production validation remain open.
 
 A CLI/JSON interface for local agent orchestration has an initial implementation. A hosted service or MCP integration is not implemented.
+
+An optional read-only stdio MCP server, SQLite fingerprint history and ordinary offline Source Map v3 decoding are implemented; remote MCP, arbitrary build provisioning and source causation remain unsupported.

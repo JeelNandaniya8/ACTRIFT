@@ -74,3 +74,5 @@ The portable Observatory includes status filters, journey search and coverage/pe
 ### Agent-assisted workflows
 
 Use `ghostdiff agent-summary report/evidence.json --strict` to inspect existing evidence without executing browser actions. `ghostdiff agent-run examples/agent.json --allow-actions` provides a data-minimized JSON result for explicitly authorized disposable local fixtures. See [agent integration](docs/agent-integration.md). No AI model or paid API is required.
+
+Optional local [MCP integration](docs/mcp.md), persistent SQLite fingerprint history and offline Source Map v3 support are available experimentally. See [history and maps](docs/history-and-maps.md).

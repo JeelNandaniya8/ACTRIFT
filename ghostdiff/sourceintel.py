@@ -2,6 +2,7 @@
 import re
 from .gitintel import git,commit
 from .diagnostics import diagnose
+from .sourcemap import map_locations
 
 EXTENSIONS=(".js",".jsx",".ts",".tsx",".html",".htm",".py",".css",".vue",".svelte",".go",".java",".rs",".rb",".php",".cs")
 HUNK=re.compile(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,(\d+))? @@(.*)$")
@@ -51,9 +52,12 @@ def rank_hunks(hunks,divergence):
         if score:result.append({"file":h["file"],"line":h["line"],"line_count":h["line_count"],"context":h["context"],"score":score,"reasons":sorted(set(reasons))})
     return sorted(result,key=lambda x:(-x["score"],x["file"],x["line"]))[:10]
 
-def localize(repo,good,bad,evidence):
+def localize(repo,good,bad,evidence,maps=None):
     hunks=changed_hunks(repo,good,bad)
     findings=diagnose(evidence)["findings"]
     for f in findings:
-        f["source_candidates"]=rank_hunks(hunks,f["first_observed_divergence"] or {})
-    return {"schema":"ghostdiff.source-diagnostics/v1","good":good,"bad":bad,"changed_hunks":len(hunks),"findings":findings,"limits":"Heuristic association of Git diff hunks with runtime paths, labels and errors. Source maps and causal attribution are not established. No source lines are copied into output; hunk context may contain source identifiers."}
+        divergence=f["first_observed_divergence"] or {}
+        mapped=map_locations(divergence.get("source_locations",[]),maps or {})
+        f["mapped_locations"]=mapped
+        f["source_candidates"]=rank_hunks(hunks,{**divergence,"source_locations":divergence.get("source_locations",[])+mapped})
+    return {"schema":"ghostdiff.source-diagnostics/v1","good":good,"bad":bad,"changed_hunks":len(hunks),"findings":findings,"limits":"Heuristic association of Git diff hunks with runtime paths, labels and errors. Explicit offline source maps supply approximate segment coordinates; deployment identity and causal attribution are not established. No source lines are copied into output; hunk context may contain source identifiers."}
