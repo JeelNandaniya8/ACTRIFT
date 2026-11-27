@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.6.0 — evidence intelligence preview
+
+- Added stable behavior fingerprints, review-only observed rename hypotheses, first-divergence diagnostics and local revision-manifest bisection.
+- Added GHOSTBENCH summary gates, browser integration and a refreshed quickstart.
+
 ## 0.5.0 — practical controls preview
 
 - Added a pinned historical TodoMVC application regression benchmark.

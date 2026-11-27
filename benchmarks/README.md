@@ -9,3 +9,6 @@ A second historical example, the MDN missing-MessagePort fix, is exercised by `p
 `python benchmarks/todomvc_history.py` exercises a documented historical VanillaJS TodoMVC bug against pinned upstream source and a fixed-versus-fixed control. It uses synthetic storage and an explicitly specified two-step journey. `python benchmarks/scale.py` records wall time, coverage and verdict agreement for wide synthetic pages. Neither suite represents production SaaS coverage.
 
 `python benchmarks/todomvc_scale.py` runs the historical TodoMVC regression and two controls for each of 100 and 1,000 synthetic stored tasks. It reports exact expected/observed verdicts and wall time and retains repeated evidence. The historical multi-file application is real upstream source, but its data and execution environment are synthetic. This is large-state validation, not production-scale deployment validation.
+
+## GHOSTBENCH summary
+Run `python benchmarks/ghostbench.py --suite core --out ghostbench-core.json` after producing the five core reports, and `--suite scale --out ghostbench-scale.json` after the two scaling reports. Missing/invalid/failed reports fail the gate. This is a reproducibility manifest, not a 100-defect corpus or a generalized detection-rate estimate.

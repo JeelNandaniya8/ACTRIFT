@@ -32,3 +32,13 @@ https://github.com/JeelNandaniya8/GHOSTDIFF
 Publication requires authenticated account access and a verified latest distribution. No social announcement or release is implied by this document.
 
 For v0.5.0 onward, use the maintainer-controlled [Publish verified preview workflow](https://github.com/JeelNandaniya8/GHOSTDIFF/actions/workflows/publish-preview.yml) only after the exact main commit has passed the Tests and Automated security checks workflows and security findings have been reviewed. If GitHub denies release permission, the owner can manually publish the verified wheel, source distribution and SHA256SUMS from the corresponding CI artifact.
+
+## v0.6.0 launch draft (publish only after exact-revision verification)
+
+Show HN: GHOSTDIFF – Git diff for observed browser behavior
+
+GHOSTDIFF compares disposable local versions of a web app, finds repeatable differences, freezes observable regression contracts, and now offers behavior fingerprints, review-only rename hypotheses and a regression boundary search over locally provisioned revisions. The project includes pinned historical examples and synthetic clean controls. I'm looking for reproducible bugs and independent review. It is an experimental tool, not a guarantee of correctness or an audited sandbox.
+
+Repository: https://github.com/JeelNandaniya8/GHOSTDIFF
+
+Demo recording sequence: run the planted demo, open the report, show the PDF failure, inspect the diagnosis, freeze the baseline and show the fingerprint. Record an actual run, not a fabricated result. No social post has been published by this document.

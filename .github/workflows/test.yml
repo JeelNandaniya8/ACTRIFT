@@ -25,6 +25,7 @@ jobs:
       - run: python benchmarks/historical.py --out historical-benchmark.json
       - run: python benchmarks/channel_history.py --out channel-history.json
       - run: python benchmarks/todomvc_history.py --out todomvc-history.json
+      - run: python benchmarks/ghostbench.py --suite core --out ghostbench-core.json
       - run: ghostdiff demo --out demo-report
       - run: ghostdiff freeze demo-report/evidence.json --out contracts.json --test-out test_protected.py
       - run: python -m compileall -q test_protected.py
@@ -39,6 +40,7 @@ jobs:
             historical-benchmark.json
             channel-history.json
             todomvc-history.json
+            ghostbench-core.json
             demo-report/
             contracts.json
             test_protected.py
@@ -124,6 +126,7 @@ jobs:
       - run: python -m playwright install --with-deps chromium
       - run: python benchmarks/scale.py --out scale.json
       - run: python benchmarks/todomvc_scale.py --out todomvc-scale.json
+      - run: python benchmarks/ghostbench.py --suite scale --out ghostbench-scale.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -131,6 +134,7 @@ jobs:
           path: |
             scale.json
             todomvc-scale.json
+            ghostbench-scale.json
   package-preview:
     needs: [test, cross-browser, isolated-demo, action-smoke, scalability]
     runs-on: ubuntu-latest

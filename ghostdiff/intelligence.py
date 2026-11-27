@@ -55,11 +55,21 @@ def match_renames(forward,reverse):
     def first(rows):
         return {(r["path"][0]["role"],r["path"][0]["name"]):r for r in rows if len(r["path"])==1 and r["path"][0]["role"] in ("button","link")}
     old,new=first(baseline),first(candidate)
+    def inventory(report):
+        roots=[r for r in report["paths"] if not r["path"]]
+        if len(roots)!=1:raise ValueError("Require initial inventory in both captures")
+        runs=roots[0]["before"]
+        if len(runs)<2 or any(r["status"]!="ok" for r in runs) or len({signature(r) for r in runs})!=1:
+            raise ValueError("Require stable initial inventory in both captures")
+        return {(x["role"],x["name"]) for x in runs[0]["initial"]["actions"]}
+    inventory_a,inventory_b=inventory(forward),inventory(reverse)
+    removed=inventory_a-inventory_b
+    added=inventory_b-inventory_a
     pairs=[]
-    for key in sorted(old.keys()-new.keys()):
+    for key in sorted(old.keys()&removed):
         x=old[key]
         hits=[]
-        for other in sorted(new.keys()-old.keys()):
+        for other in sorted(new.keys()&added):
             if key[0]==other[0] and x["outcomes"]==new[other]["outcomes"]:
                 hits.append({"role":other[0],"name":other[1],"label_score":score(key[1],other[1])})
         pairs.append({"from":{"role":key[0],"name":key[1]},"contract_id":digest(x["path"])[:16],"candidates":sorted(hits,key=lambda h:(-h["label_score"],h["name"]))})

@@ -1,20 +1,16 @@
 # Roadmap
 
-## Implemented, subject to current CI
-- Browser journey comparison and replay, persistent contracts, generated unittest, observatory.
-- Planted benchmarks, pinned external example, one historical upstream defect.
-- Optional browser engines, action exception observations and review-only matching suggestions.
-- Isolated demo container recipe, package artifacts.
+## Implemented, subject to exact-revision CI
+- Bounded browser comparison, replay, contracts, explicit forms and reviewed aliases.
+- Evidence fingerprints, observational rename hypotheses, first-divergence diagnostics, and local revision-manifest bisection.
+- GHOSTBENCH core and scaling report aggregation; pinned historical upstream examples and TodoMVC large-state cases.
+- Parallel comparison, browser matrix, reusable CI action, automated scans and gated package artifacts.
 
-## Research still needed
-- Diverse historical defects in full production-scale open-source applications.
-- Better cross-version semantic matching with measured precision, ambiguity rejection and explicit user approval.
-- Audited production execution isolation, deterministic backend reset, stateful forms, accessibility and non-English workflows.
-- Performance profiling and independent security review.
+## Open research and launch work
+- Independent reviewer report and remediation; robust OS-level isolation.
+- Production-scale multi-user backend validation, deterministic state reset, diverse historical defects and representative controls.
+- Source-level root cause correlation, semantic matching beyond observed one-step outcomes, verified Git revision provisioning.
+- Candidate-side exploration, platform matrix for macOS/Windows, configuration usability and external beta testing.
+- Publish verified release and community announcements through authorized maintainer accounts.
 
-Do not interpret benchmark fixtures as a universal accuracy estimate.
-
-## Validation milestones
-- Three pinned historical example/application defects and clean controls; TodoMVC large-state cases are gated in CI.
-- Automated dependency and static source checks, resource observation limits, and a public independent review request.
-- Still open: independent human audit, diverse production-scale multi-user applications, backend isolation, and network/disk resource enforcement.
+Do not interpret fixture pass counts as general accuracy.

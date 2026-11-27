@@ -14,21 +14,24 @@ def row(name,text="Done"):
     return {"path":path,"status":"equivalent_observed","reason":"test","before":[run,copy.deepcopy(run)],"after":[copy.deepcopy(run),copy.deepcopy(run)]}
 
 def evidence(a,b,rows):
-    return {"schema":"ghostdiff.evidence/v1","observation_revision":3,"settings":asdict(Settings()),"before_url":a,"after_url":b,"paths":rows}
+    snap={"route":"/","text":["Ready"],"actions":[r["path"][0] for r in rows]}
+    run={"status":"ok","initial":snap,"final":snap,"steps":[]}
+    root={"path":[],"status":"inventory","reason":"test","before":[run,copy.deepcopy(run)],"after":[copy.deepcopy(run),copy.deepcopy(run)]}
+    return {"schema":"ghostdiff.evidence/v1","observation_revision":3,"settings":asdict(Settings()),"before_url":a,"after_url":b,"paths":[root]+rows}
 
 class IntelligenceTests(unittest.TestCase):
     def test_fingerprint_order_and_scope(self):
         a=evidence("a","b",[row("Save"),row("Export")])
         b=copy.deepcopy(a);b["paths"].reverse()
         self.assertEqual(fingerprint(a)["behavior_sha256"],fingerprint(b)["behavior_sha256"])
-        b["paths"][0]=row("Export","Changed")
+        b["paths"][next(i for i,r in enumerate(b["paths"]) if r["path"] and r["path"][0]["name"]=="Export")]=row("Export","Changed")
         self.assertNotEqual(fingerprint(a)["behavior_sha256"],fingerprint(b)["behavior_sha256"])
         self.assertEqual(fingerprint(a)["scope_sha256"],fingerprint(b)["scope_sha256"])
     def test_rename_ambiguity(self):
         a=evidence("a","b",[row("Export")])
         b=evidence("b","a",[row("Download")])
         self.assertEqual(match_renames(a,b)["hypotheses"][0]["status"],"review_required")
-        b["paths"].append(row("Save"))
+        b=evidence("b","a",[row("Download"),row("Save")])
         self.assertEqual(match_renames(a,b)["hypotheses"][0]["status"],"ambiguous")
     def test_diagnose(self):
         r=row("Save");r["status"]="behavior_changed"

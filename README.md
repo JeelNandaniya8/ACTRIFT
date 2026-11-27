@@ -1,119 +1,62 @@
 # GHOSTDIFF
 
-**Git diff tells you what changed in code. Ghostdiff investigates what changed in observable behavior.**
+**Git diff shows what changed in code. GHOSTDIFF investigates what changed in observable behavior.**
 
-**Find broken user journeys before you merge.** Compare two local web app versions without writing a test for every button. Ghostdiff clicks discoverable actions, compares what happened, and gives you replayable evidence. Experimental: it cannot certify every feature or infer intent.
+A local-first research preview for comparing two disposable web application versions, replaying user journeys, and preserving stable regression contracts. No required external model API. Not a general proof of software correctness.
 
 ## Quick start
 
-Requires Python 3.10+.
+Python 3.10+ and a Playwright browser are required.
 
 ```sh
+git clone https://github.com/JeelNandaniya8/GHOSTDIFF.git
+cd GHOSTDIFF
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
 python -m playwright install chromium
+ghostdiff doctor
 ghostdiff demo --out demo-report
 ```
 
-Open `demo-report/report.html`. The demo contains three **planted** faults: a no-op PDF export, a removed history action, and a theme that fails to persist after reload. `ghostdiff demo --clean` compares a harmless redesign.
+Open `demo-report/report.html` or `demo-report/observatory.html`. The demo has three deliberately planted regressions: a PDF export no-op, missing history button, and theme persistence failure. Use `ghostdiff demo --clean` for a harmless redesign control.
+
+## Compare and preserve
 
 ```sh
 ghostdiff compare --before http://127.0.0.1:3000 --after http://127.0.0.1:3001 --allow-actions --out report
-ghostdiff replay report/evidence.json --index 1 --before http://127.0.0.1:3000 --after http://127.0.0.1:3001 --allow-actions
+ghostdiff freeze report/evidence.json --out contracts.json
+ghostdiff verify contracts.json --target http://127.0.0.1:3001 --allow-actions
+ghostdiff fingerprint report/evidence.json --side before
+ghostdiff diagnose report/evidence.json
 ```
 
-Only use disposable local applications with synthetic data. Clicks and GET requests can have side effects. Fresh browser contexts do not reset backend state. The request filter is a precaution, not a security sandbox; isolate test apps and browser at the OS/network level. Reports contain observed page text and download metadata; review before sharing.
+Use `ghostdiff match` on forward/reverse captures for review-only rename hypotheses, and `ghostdiff bisect` for a supplied ordered manifest of already-running local revisions. See [evidence intelligence](docs/intelligence.md). These are constrained observational tools, not general semantic inference, automatic build orchestration, or source-level root cause proof.
 
-## What the preview does (and does not)
+## Features and limits
 
-- Bounded baseline exploration, exact accessible-name replay, repeated observations, JSON evidence and a standalone HTML report.
-- `unmatched` means the original action could not be matched; it could have been renamed. `behavior_changed` and `download_changed` require human review. `inconclusive` is not a pass.
-- No arbitrary form filling, authentication, cross-origin workflows, semantic action matching, PDF content validation, or general feature completeness claim. Dynamic text and hidden state may cause false differences or missed behavior. Candidate-only actions are inventoried, not exhaustively explored.
-- `--fail-on-change` exits 1 for observed differences, 2 for inconclusive results, otherwise 0. Exploration is capped by depth/budget; untested behavior is not certified.
+- Bounded baseline action discovery, repeated observations, download hashing, JavaScript and HTTP failure evidence, HTML/JSON reports.
+- Chromium default; Firefox and WebKit smoke coverage. Optional parallel comparison of independent local app versions.
+- Stable regression contracts, explicit reviewed aliases, legacy recapture, and synthetic form journeys with local test-account storage state.
+- Optional text masks, screenshots, action ignore rules, strict coverage gate and [reusable GitHub Action](docs/github-action.md).
+- `--fail-on-change` rejects observed differences and inconclusive results; `--require-complete` also rejects skipped, unobserved and budget-omitted paths within the chosen depth.
+- Candidate-only actions are inventoried, not exhaustively explored. Unmatched can mean rename; dynamic state can cause false differences; GET can mutate data.
 
-## Development
+**Safety:** Use only disposable local applications and synthetic data. Fresh browser contexts do not reset backend state. Request filtering is not a security sandbox. Raw evidence may contain sensitive data. See [SECURITY](SECURITY.md), [safety and authentication](docs/safety-and-auth.md), and [isolated demo runner](sandbox/README.md). Independent security audit remains open.
+
+## Evidence and benchmarks
+
+[GHOSTBENCH methodology](benchmarks/README.md) separates planted faults, upstream historical defects, clean controls and bounded scaling. The previous verified 0.5.0 revision (29d21e5) passed all eight CI jobs, including six TodoMVC large-state cases. See [exact CI evidence](https://github.com/JeelNandaniya8/GHOSTDIFF/actions/runs/45943920394) and [security scans](https://github.com/JeelNandaniya8/GHOSTDIFF/actions/runs/45943920498). New revisions require fresh verification. No broad accuracy or production-scale certification is claimed.
+
+## Development and release
 
 ```sh
 python -m unittest discover -s tests -v
 GHOSTDIFF_BROWSER_TESTS=1 python -m unittest discover -s tests -v
 ```
 
-Browser integration tests exercise planted faults and a clean redesign. The original and expanded Chromium CI workflows passed. Newer changes require their own CI verification. No general accuracy or novelty claim has been established.
+[CI results](https://github.com/JeelNandaniya8/GHOSTDIFF/actions) · [Contract docs](docs/contracts.md) · [Roadmap](docs/roadmap.md) · [Launch kit](docs/launch.md)
 
-License: Apache-2.0.
+Distribution artifacts are gated on CI. A maintainer can dispatch the verified-release workflow only after reviewing the exact revision's successful test/security runs. The project is an experimental preview; official publication and independent review are separate milestones.
 
-## Behavioral DNA and regression contracts
-
-Open `demo-report/observatory.html` to inspect the interactive journey tree, or freeze stable baseline observations into executable regression contracts:
-
-```sh
-ghostdiff freeze demo-report/evidence.json --out contracts.json --test-out test_protected.py
-ghostdiff verify contracts.json --target http://127.0.0.1:3001 --allow-actions
-```
-
-See [contract documentation](docs/contracts.md), [benchmark methodology](benchmarks/README.md), and [CI runs](https://github.com/JeelNandaniya8/GHOSTDIFF/actions). The initial browser test workflow passed. The expanded suite must be verified independently. The benchmark is synthetic, not a real-world accuracy claim.
-
-## Release and external benchmark
-
-Research-preview distribution artifacts are gated on CI. Automatic release publication returned HTTP 403; a maintainer must publish a release manually. The external benchmark uses a pinned CC0 MDN dialog example with a deliberately planted fault, not a historical production bug. Run `python benchmarks/upstream.py` to reproduce it.
-
-## Observation reliability
-
-Run `ghostdiff doctor` after installation to verify Chromium launch. The current observation format preserves repeated text occurrences and records action availability changes. A journey with no supported observable effect is classified as `unobserved`, not verified. `--fail-on-change` returns 2 when no equivalent observable journey was found, even if there are no detected changes. Rerun comparison and freeze to migrate older contracts to the current observation revision 3.
-
-## Browser portability
-
-Chromium is the default. Firefox and WebKit have optional experimental support with a dedicated smoke-test CI gate:
-
-```sh
-python -m playwright install firefox
-ghostdiff doctor --browser firefox
-ghostdiff demo --browser firefox
-```
-
-The selected engine is recorded in evidence and retained by replay and frozen contracts. Different engines can expose different behavior; compare using the same engine. This is not a guarantee of macOS Safari equivalence or compatibility with every app.
-
-## Historical evidence, matching and isolated execution
-
-- Run `python benchmarks/historical.py` to compare the original fixed revision of an MDN example with its buggy parent (a documented JavaScript exception).
-- Unmatched actions include ranked local name-similarity suggestions; no suggested action is executed automatically. This is a lexical/synonym heuristic, not general semantic equivalence.
-- Observation revision 3 records uncaught JavaScript exceptions during actions. Re-run comparison and freeze contracts; earlier formats are rejected.
-- See [isolated demo runner](sandbox/README.md). It is not an audited production sandbox.
-- Distribution wheels are built as [CI artifacts](https://github.com/JeelNandaniya8/GHOSTDIFF/actions) after the test matrix. Release publishing requires maintainer permissions.
-
-## Reviewed renames and contract recapture
-
-Use `ghostdiff recapture` to re-observe legacy contracts against a known-good baseline without discarding mismatches, and `ghostdiff verify --aliases` for developer-approved action-name changes. See [contract migration and aliases](docs/contracts.md).
-
-## Practical controls
-
-```sh
-ghostdiff compare --before http://127.0.0.1:3000 --after http://127.0.0.1:3001 --allow-actions --ignore "Delete, Logout" --mask-text .timestamp --screenshots
-```
-
-Risky action names are skipped by default; custom exclusions and text masks reduce coverage. Optional screenshots provide visual evidence. Separate local test-account storage states support authenticated comparisons. See [safety and authentication](docs/safety-and-auth.md) and the [reusable GitHub Action](docs/github-action.md). Reports may contain sensitive data; use synthetic fixtures only.
-
-## Explicit form journeys
-
-Use `ghostdiff journey` with a reviewed [JSON specification](examples/search-journey.json) for synthetic textbox inputs and named actions. See [usage and restrictions](docs/safety-and-auth.md).
-
-The reusable GitHub Action now emits a numeric summary for an optional maintainer-authorized PR comment. The action smoke workflow checks a clean redesign and a deliberately broken candidate before packaging.
-
-## Hidden server failures
-
-Repeated action-time HTTP 5xx responses from fetch/XHR and HTTP 4xx/5xx document responses are recorded even if the rendered text does not change. Initial-load failures and unhealthy baseline journeys are inconclusive. API 4xx and static resource failures are not classified automatically; expected negative tests may need manual review. Request query strings and bodies are not included in this HTTP error evidence. Explicit form specifications can select native search inputs with `"role": "searchbox"`.
-
-## Coverage and CI policy
-
-`--fail-on-change` also rejects stable baseline-only action inventory entries, even when the path budget prevented clicking them. Such entries may indicate a rename, not necessarily a broken action. `--require-complete` additionally rejects skipped actions, budget-omitted branches and unobserved journeys within the selected depth. Depth frontiers remain explicit and are not proof of full coverage. `--summary-only` suppresses individual action names in console output, not in saved reports.
-
-The [security self-review](docs/security-review.md) records tested controls and remaining risks. The historical benchmark suite now includes a second pinned upstream example with a fixed-versus-fixed control. Latest results are available in CI; this is not a production-scale accuracy or security claim.
-
-## Performance and scaling
-
-Use `--parallel` to compare two independent disposable local versions in separate browser instances concurrently. It is opt-in, read-policy only, and rejects a shared origin. Distinct origins do not guarantee independent backend state. Every explored path still has repeated fresh-context observations. Reports record elapsed seconds and paths per second; `python benchmarks/scale.py` measures sequential versus parallel operation for 8, 24 and 64 synthetic actions, including coverage truncation and verdict agreement. No fixed speedup is claimed until measured.
-
-Maintainers can publish a preview through the manually dispatched verified-release workflow after reviewing security findings and the exact commit's successful CI. It does not automatically publish from a push.
-
-Large-state validation now includes the pinned historical TodoMVC reference application with 100 and 1,000 synthetic tasks. Security observation limits and scanner summaries are documented in [SECURITY.md](SECURITY.md). See CI for exact measured results; this is not an independent audit or production certification.
+Apache-2.0. Vendored benchmark sources retain their upstream licenses.
