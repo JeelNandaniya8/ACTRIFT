@@ -113,3 +113,5 @@ The [security self-review](docs/security-review.md) records tested controls and 
 ## Performance and scaling
 
 Use `--parallel` to compare two independent disposable local versions in separate browser instances concurrently. It is opt-in, read-policy only, and rejects a shared origin. Distinct origins do not guarantee independent backend state. Every explored path still has repeated fresh-context observations. Reports record elapsed seconds and paths per second; `python benchmarks/scale.py` measures sequential versus parallel operation for 8, 24 and 64 synthetic actions, including coverage truncation and verdict agreement. No fixed speedup is claimed until measured.
+
+Maintainers can publish a preview through the manually dispatched verified-release workflow after reviewing security findings and the exact commit's successful CI. It does not automatically publish from a push.

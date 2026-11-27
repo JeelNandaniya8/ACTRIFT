@@ -30,3 +30,5 @@ https://github.com/JeelNandaniya8/GHOSTDIFF
 - Submit via https://news.ycombinator.com/submit and https://www.reddit.com/submit or https://x.com/compose/post from the owner's authenticated accounts; follow community rules, disclose experimental limitations, never manufacture engagement.
 
 Publication requires authenticated account access and a verified latest distribution. No social announcement or release is implied by this document.
+
+For v0.5.0 onward, use the maintainer-controlled [Publish verified preview workflow](https://github.com/JeelNandaniya8/GHOSTDIFF/actions/workflows/publish-preview.yml) only after the exact main commit has passed the Tests and Automated security checks workflows and security findings have been reviewed. If GitHub denies release permission, the owner can manually publish the verified wheel, source distribution and SHA256SUMS from the corresponding CI artifact.
