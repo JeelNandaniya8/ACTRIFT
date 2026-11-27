@@ -18,5 +18,5 @@ actrift-mcp = "ghostdiff.mcp_server:main"
 include = ["ghostdiff*"]
 
 [project.urls]
-Repository = "https://github.com/JeelNandaniya8/GHOSTDIFF"
-Issues = "https://github.com/JeelNandaniya8/GHOSTDIFF/issues"
+Repository = "https://github.com/JeelNandaniya8/ACTRIFT"
+Issues = "https://github.com/JeelNandaniya8/ACTRIFT/issues"
