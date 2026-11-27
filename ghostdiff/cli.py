@@ -68,6 +68,7 @@ def main(argv=None):
             p.add_argument("--after",required=True)
             p.add_argument("--allow-actions",action="store_true")
             p.add_argument("--allow-writes",action="store_true")
+            p.add_argument("--reset-backend",action="store_true",help="Explicitly POST the fixed reset endpoint before each observation; disposable numeric-loopback servers only")
             p.add_argument("--fail-on-change",action="store_true")
             p.add_argument("--require-complete",action="store_true",help="Also fail on skipped, budget-omitted or unobserved journeys within selected depth")
         else:
@@ -183,6 +184,7 @@ def main(argv=None):
             if a.index<0: raise ValueError("Index must be nonnegative")
             data=json.loads(Path(a.evidence).read_text(encoding="utf-8"))
             if data["schema"]!="ghostdiff.evidence/v1": raise ValueError("Unsupported evidence schema")
+            if data.get("backend_reset"):raise ValueError("Reset-dependent evidence requires a fresh explicitly authorized comparison")
             row=data["paths"][a.index]
             if (data.get("authenticated_baseline") and not a.before_state) or (data.get("authenticated_candidate") and not a.after_state): raise ValueError("Replay requires explicit storage states for authenticated versions")
             settings={**data["settings"],"allow_writes":a.allow_writes,"allow_risky_actions":a.allow_risky_actions,"executable":a.browser_executable}
@@ -196,7 +198,7 @@ def main(argv=None):
             report["demo"]={"clean":a.clean,"planted_faults":[] if a.clean else ["export no-op","history removed","theme not persisted"]}
         else:
             if not a.allow_actions: parser.error("compare requires --allow-actions")
-            report=compare(a.before,a.after,cfg,a.before_state,a.after_state)
+            report=compare(a.before,a.after,cfg,a.before_state,a.after_state,reset=a.reset_backend)
         save(report,a.out,a.summary_only)
         if getattr(a,"fail_on_change",False) or getattr(a,"require_complete",False):
             return exit_code(report,strict=a.require_complete)

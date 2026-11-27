@@ -16,6 +16,7 @@ from urllib.parse import urlsplit
 from playwright.sync_api import Browser, Error, sync_playwright
 from .matching import suggestions
 from .session import local_storage_state
+from .reset import reset_target,reset_backend
 
 
 @dataclass(frozen=True, order=True)
@@ -440,8 +441,14 @@ def compare_path(before, after):
     return 'behavior_changed','Observable action outcomes differ; inspect intent'
 
 
-def repeated(browser,url,path,cfg,state):
-    return [experiment(browser,url,path,replace(cfg,screenshots=cfg.screenshots and i==0),state) for i in range(cfg.repeats)]
+def repeated(browser,url,path,cfg,state,reset=False):
+    results=[]
+    for i in range(cfg.repeats):
+        if reset and not reset_backend(url):
+            results.append({"status":"inconclusive","reason":"Explicit backend reset failed","steps":[]})
+            continue
+        results.append(experiment(browser,url,path,replace(cfg,screenshots=cfg.screenshots and i==0),state))
+    return results
 
 
 @contextmanager
@@ -474,9 +481,13 @@ def candidate_worker(cfg):
             pool.submit(stop).result()
 
 
-def compare(before_url: str, after_url: str, cfg: Settings, before_state=None, after_state=None) -> dict:
+def compare(before_url: str, after_url: str, cfg: Settings, before_state=None, after_state=None, *, reset=False) -> dict:
     cfg.validate()
     validate_url(before_url); validate_url(after_url)
+    if type(reset) is not bool:raise ValueError("Reset authorization must be boolean")
+    if reset:
+        if reset_target(before_url)==reset_target(after_url) or cfg.parallel or cfg.allow_writes:
+            raise ValueError("Reset requires separate disposable local servers, sequential execution and read-policy browser actions")
     if cfg.parallel and origin(before_url)==origin(after_url):
         raise ValueError("Parallel mode requires separate local origins and independent test backends")
     if cfg.parallel and cfg.allow_writes:
@@ -496,8 +507,8 @@ def compare(before_url: str, after_url: str, cfg: Settings, before_state=None, a
             while queue and len(rows) < cfg.budget:
                 path = queue.popleft()
                 pending=submit(after_url,path,after_state) if submit else None
-                before=repeated(browser,before_url,path,cfg,before_state)
-                after=pending.result() if pending else repeated(browser,after_url,path,cfg,after_state)
+                before=repeated(browser,before_url,path,cfg,before_state,reset)
+                after=pending.result() if pending else repeated(browser,after_url,path,cfg,after_state,reset)
                 status,reason = compare_path(before,after)
                 a,b = before[0],after[0]
                 rows.append({"path":[asdict(x) for x in path],"status":status,"reason":reason,"before":before,"after":after})
@@ -531,7 +542,7 @@ def compare(before_url: str, after_url: str, cfg: Settings, before_state=None, a
             browser.close()
     elapsed=perf_counter()-started
     return {"schema":"ghostdiff.evidence/v1","performance":{"elapsed_seconds":round(elapsed,3),"paths_per_second":round(len(rows)/max(elapsed,0.001),3),"parallel":cfg.parallel},"before_url":before_url,"after_url":after_url,
-            "observation_revision":3,"authenticated_baseline":before_state is not None,"authenticated_candidate":after_state is not None,"settings":asdict(cfg),"summary":dict(Counter(r['status'] for r in rows)),"candidate_only_actions":candidate_only,"baseline_only_actions":baseline_only,
+            "observation_revision":3,"backend_reset":reset,"authenticated_baseline":before_state is not None,"authenticated_candidate":after_state is not None,"settings":asdict(cfg),"summary":dict(Counter(r['status'] for r in rows)),"candidate_only_actions":candidate_only,"baseline_only_actions":baseline_only,
             "paths":rows,"skipped_actions":skipped,"coverage":{"executed_paths":len(rows),"path_budget":cfg.budget,"depth_limit":cfg.depth,"budget_reached":len(rows)>=cfg.budget,"omitted_budget_branches":omitted_budget,"depth_frontiers":depth_frontiers,"skipped_action_entries":len(skipped)},"limits":"Bounded baseline exploration without state pruning; exact accessible names; observed deltas, not proof of functional equivalence."}
 
 

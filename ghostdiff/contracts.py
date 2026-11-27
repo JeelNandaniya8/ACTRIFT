@@ -16,6 +16,8 @@ def freeze(evidence):
         raise ValueError("Unsupported evidence schema")
     if evidence.get("observation_revision") != 3:
         raise ValueError("Evidence uses an older observation format; rerun compare before freezing")
+    if evidence.get("backend_reset"):
+        raise ValueError("Reset-dependent evidence cannot yet be frozen into ordinary contracts")
     cfg = Settings(**evidence["settings"])
     cfg.validate()
     if cfg.allow_writes or cfg.allow_risky_actions:

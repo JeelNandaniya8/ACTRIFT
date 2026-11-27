@@ -39,7 +39,7 @@ def fingerprint(evidence,side="before"):
     if not stable: raise ValueError("No stable observable paths to fingerprint")
     cfg=Settings(**evidence["settings"])
     policy={k:getattr(cfg,k) for k in ("browser","depth","budget","repeats","settle_ms","timeout_ms","ignore","mask_text","allow_writes","allow_risky_actions")}
-    scope={"observation_revision":3,"policy":policy,"paths":[r["path"] for r in stable],"authenticated":bool(evidence.get("authenticated_baseline" if side=="before" else "authenticated_candidate"))}
+    scope={"observation_revision":3,"policy":policy,"paths":[r["path"] for r in stable],"authenticated":bool(evidence.get("authenticated_baseline" if side=="before" else "authenticated_candidate")),"backend_reset":bool(evidence.get("backend_reset"))}
     return {"schema":"ghostdiff.fingerprint/v1","scope_sha256":digest(scope),"behavior_sha256":digest(stable),"observed_paths":len(stable),"excluded_paths":excluded,"coverage":evidence.get("coverage",{}),"limits":"Digest of stable observed deltas only; compare only matching scope hashes and review exclusions. Not an identity, signature, or correctness proof."}
 
 def behavior_similarity(a,b):
@@ -64,7 +64,7 @@ def match_renames(forward,reverse):
     if forward.get("before_url")!=reverse.get("after_url") or forward.get("after_url")!=reverse.get("before_url"):
         raise ValueError("Reverse evidence must swap the exact target URLs")
     a=Settings(**forward["settings"]);b=Settings(**reverse["settings"])
-    if a!=b or a.allow_writes or a.allow_risky_actions:
+    if a!=b or a.allow_writes or a.allow_risky_actions or bool(forward.get("backend_reset"))!=bool(reverse.get("backend_reset")):
         raise ValueError("Require matching read-policy settings for both captures")
     if any(report.get(k) for report in (forward,reverse) for k in ("authenticated_baseline","authenticated_candidate")):
         raise ValueError("Rename research currently requires unauthenticated fixtures")
