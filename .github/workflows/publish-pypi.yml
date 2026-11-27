@@ -1,0 +1,101 @@
+name: Publish verified package to PyPI
+on:
+  workflow_dispatch:
+    inputs:
+      commit:
+        description: Exact reviewed main commit SHA
+        required: true
+        type: string
+      test-run:
+        description: Successful Tests run ID for that commit
+        required: true
+        type: string
+      security-run:
+        description: Successful security run ID for that commit
+        required: true
+        type: string
+      review-confirmed:
+        description: Maintainer reviewed findings, preview limitations and package ownership
+        required: true
+        type: boolean
+        default: false
+permissions:
+  contents: read
+  actions: read
+jobs:
+  verify:
+    if: inputs.review-confirmed && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Verify exact workflow provenance
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT: ${{ inputs.commit }}
+          TEST_RUN: ${{ inputs.test-run }}
+          SECURITY_RUN: ${{ inputs.security-run }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$COMMIT" =~ ^[0-9a-f]{40}$ ]]
+          [[ "$TEST_RUN" =~ ^[0-9]+$ ]]
+          [[ "$SECURITY_RUN" =~ ^[0-9]+$ ]]
+          test "$COMMIT" = "$GITHUB_SHA"
+          verify_run() {
+            gh api "repos/$GITHUB_REPOSITORY/actions/runs/$1" | jq -e --arg sha "$COMMIT" --arg path "$2" '.head_sha == $sha and .head_branch == "main" and .path == $path and .event == "push" and .conclusion == "success"' >/dev/null
+          }
+          verify_run "$TEST_RUN" ".github/workflows/test.yml"
+          verify_run "$SECURITY_RUN" ".github/workflows/security.yml"
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.commit }}
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Verify existing GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          COMMIT: ${{ inputs.commit }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]
+          gh release view "v$version" --json isDraft --jq '.isDraft' | grep -qx false
+          test "$(gh api "repos/$GITHUB_REPOSITORY/commits/v$version" --jq .sha)" = "$COMMIT"
+      - uses: actions/download-artifact@v4
+        with:
+          name: ghostdiff-preview-distribution
+          path: dist
+          run-id: ${{ inputs.test-run }}
+          github-token: ${{ github.token }}
+      - name: Check exact package files
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml","rb"))["project"]["version"])')
+          (cd dist && sha256sum --check SHA256SUMS)
+          test "$(find dist -maxdepth 1 -name "*-$version-*.whl" | wc -l)" = 1
+          test "$(find dist -maxdepth 1 -name "*-$version.tar.gz" | wc -l)" = 1
+          mkdir publish
+          cp dist/*-"$version"-*.whl dist/*-"$version".tar.gz publish/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: checked-pypi-files
+          path: publish/
+          if-no-files-found: error
+  publish:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: pypi
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: checked-pypi-files
+          path: dist
+      - uses: pypa/gh-action-pypi-publish@release/v1

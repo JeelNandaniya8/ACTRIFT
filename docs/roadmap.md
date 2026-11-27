@@ -16,3 +16,5 @@
 - Official GitHub release, PyPI publisher registration, site activation and external beta feedback.
 
 Fixture success is not a general accuracy rate. No independent certification or production readiness is claimed.
+
+PyPI trusted publishing is prepared via the maintainer-controlled workflow. See [PyPI setup](pypi.md). Registration and actual publication are separate owner actions.

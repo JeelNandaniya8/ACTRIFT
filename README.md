@@ -78,3 +78,5 @@ Use `ghostdiff agent-summary report/evidence.json --strict` to inspect existing 
 Optional local [MCP integration](docs/mcp.md), persistent SQLite fingerprint history and offline Source Map v3 support are available experimentally. See [history and maps](docs/history-and-maps.md).
 
 The static project website is in [site/](site/); [hosting instructions](docs/site.md). No live deployment is implied by the source.
+
+PyPI trusted publishing is prepared via the maintainer-controlled workflow. See [PyPI setup](docs/pypi.md). Registration and actual publication are separate owner actions.
