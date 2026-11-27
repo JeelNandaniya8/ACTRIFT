@@ -14,3 +14,5 @@
 - Publish verified release and community announcements through authorized maintainer accounts.
 
 Do not interpret fixture pass counts as general accuracy.
+
+Static Git snapshot automation, context-aware matching and source hunk correlation are implemented experimentally. Build-dependent applications, general semantic equivalence and causal source mapping remain research goals. A pinned htmx integration regression expands the historical corpus.

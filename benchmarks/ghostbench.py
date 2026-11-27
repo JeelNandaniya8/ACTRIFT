@@ -10,6 +10,7 @@ SUITES={
         "historical-benchmark.json":"historical MDN DOM example",
         "channel-history.json":"historical MDN channel messaging example",
         "todomvc-history.json":"historical TodoMVC reference application",
+        "htmx-history.json":"historical htmx library integration defect",
     },
     "scale":{
         "scale.json":"synthetic action-width scaling",

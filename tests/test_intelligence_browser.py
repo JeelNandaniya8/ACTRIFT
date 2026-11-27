@@ -32,3 +32,12 @@ class BrowserIntelligence(unittest.TestCase):
             result=bisect(manifest,freeze(good),exhaustive=True)
             self.assertEqual(result["status"],"observed_boundary")
             self.assertEqual(result["boundary"]["first_bad"],manifest["revisions"][2]["commit"])
+
+    def test_contextual_rename(self):
+        def panel(name):
+            return f"""<!doctype html><html><body><button onclick="document.querySelector('section').hidden=false">Open panel</button><section hidden><button onclick="document.querySelector('p').textContent='Done'">{name}</button><p>Ready</p></section></body></html>""".encode()
+        cfg=Settings(depth=2,budget=8,settle_ms=100)
+        with serve(panel("Export")) as a,serve(panel("Download")) as b:
+            f=compare(a,b,cfg);r=compare(b,a,cfg)
+        matches=match_renames(f,r)["hypotheses"]
+        self.assertTrue(any(x["step"]==1 and x["from"]["name"]=="Export" and x["status"]=="review_required" for x in matches))

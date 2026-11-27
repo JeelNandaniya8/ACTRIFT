@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased — Git and context intelligence
+
+- Automate trusted local static Git revisions, rank changed source hunks and capture bounded runtime stack locations.
+- Match renamed actions in stable shared journey contexts and add a pinned htmx historical regression.
+
 ## 0.6.0 — evidence intelligence preview
 
 - Added stable behavior fingerprints, review-only observed rename hypotheses, first-divergence diagnostics and local revision-manifest bisection.

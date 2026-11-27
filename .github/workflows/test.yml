@@ -25,6 +25,7 @@ jobs:
       - run: python benchmarks/historical.py --out historical-benchmark.json
       - run: python benchmarks/channel_history.py --out channel-history.json
       - run: python benchmarks/todomvc_history.py --out todomvc-history.json
+      - run: python benchmarks/htmx_history.py --out htmx-history.json
       - run: python benchmarks/ghostbench.py --suite core --out ghostbench-core.json
       - run: ghostdiff demo --out demo-report
       - run: ghostdiff freeze demo-report/evidence.json --out contracts.json --test-out test_protected.py
@@ -40,6 +41,7 @@ jobs:
             historical-benchmark.json
             channel-history.json
             todomvc-history.json
+            htmx-history.json
             ghostbench-core.json
             demo-report/
             contracts.json

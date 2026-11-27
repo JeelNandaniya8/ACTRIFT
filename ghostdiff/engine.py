@@ -200,6 +200,22 @@ class BoundedEvents(list):
         self.overflow=False
 
 
+def source_locations(stack,allowed):
+    """Bounded same-origin stack coordinates; no query strings or raw stack retained."""
+    found=[]
+    if not isinstance(stack,str):return found
+    for match in re.finditer(r"(https?://[^\s()]+?):(\d+):(\d+)(?=\s|\)|$)",stack[:12000]):
+        url,line,column=match.groups()
+        try:
+            if origin(url)!=allowed:continue
+        except ValueError:continue
+        path=urlsplit(url).path[:300]
+        loc={"path":path,"line":int(line),"column":int(column)}
+        if loc not in found:found.append(loc)
+        if len(found)>=5:break
+    return found
+
+
 def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settings, storage_state=None, form_values=None) -> dict:
     """Every path starts in a fresh browser context; no real user session is used."""
     form_values=form_values or {}
@@ -212,6 +228,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
     downloads = BoundedEvents(8)
     page_errors = BoundedEvents(20)
     http_errors = BoundedEvents(20)
+    error_locations = BoundedEvents(100)
     pages = BoundedEvents(2)
     steps = []
 
@@ -245,10 +262,15 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
             # Do not retain query strings, request bodies, headers or credentials.
             http_errors.append({"resource":kind,"status":response.status,"path":urlsplit(response.url).path[:300]})
 
+    def on_page_error(exc):
+        page_errors.append(normal(str(exc))[:500])
+        for location in source_locations(getattr(exc,"stack",None),allowed):
+            if location not in error_locations:error_locations.append(location)
+
     def watch(page):
         pages.append(page)
         page.on('download', on_download)
-        page.on('pageerror', lambda exc: page_errors.append(normal(str(exc))[:500]))
+        page.on('pageerror', on_page_error)
 
     context.route('**/*', gate)
     if hasattr(context, 'route_web_socket'):
@@ -276,6 +298,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
             downloads.clear()
             page_errors.clear()
             http_errors.clear()
+            error_locations.clear()
             if action.role == 'reload':
                 response = page.reload(wait_until='domcontentloaded', timeout=cfg.timeout_ms)
                 if response is None or not response.ok:
@@ -325,6 +348,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
                 return {"status":"inconclusive","reason":"Browser event observation limit exceeded","steps":steps}
             outcome=delta(previous,current,files)
             outcome["page_errors"]=sorted(page_errors[:20])
+            if error_locations:outcome["source_locations"]=sorted(error_locations,key=stable_json)
             if http_errors:
                 outcome["http_errors"]=sorted(http_errors,key=stable_json)[:20]
             steps.append({"action":asdict(action), "outcome":outcome})

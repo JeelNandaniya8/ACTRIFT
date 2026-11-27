@@ -49,3 +49,15 @@ class IntelligenceTests(unittest.TestCase):
         self.assertEqual(locate(rows,p,True)["status"],"observed_boundary")
         self.assertEqual(locate(rows,lambda r:"bad" if int(r["commit"],16) in (2,7) else "good",True)["status"],"non_monotonic")
         self.assertEqual(locate(rows,lambda r:"inconclusive" if r==rows[3] else p(r))["status"],"inconclusive")
+
+    def test_partial_behavior_requires_nontest_signal(self):
+        from ghostdiff.intelligence import behavior_similarity
+        a={"text_added":["Export complete"],"route_change":"/reports","downloads":[]}
+        b={"text_added":["Download complete"],"route_change":"/reports","downloads":[]}
+        self.assertEqual(behavior_similarity(a,b)[0],"partial")
+        self.assertIsNone(behavior_similarity(a,{**b,"route_change":"/other"}))
+        self.assertIsNone(behavior_similarity({**a,"route_change":None},{**b,"route_change":None}))
+    def test_runtime_coordinates(self):
+        from ghostdiff.engine import source_locations,origin
+        stack="Error\n at go (http://127.0.0.1:3000/app.js?token=private:12:4)\n at other (http://localhost:3001/x.js:8:1)"
+        self.assertEqual(source_locations(stack,origin("http://127.0.0.1:3000")), [{"path":"/app.js","line":12,"column":4}])

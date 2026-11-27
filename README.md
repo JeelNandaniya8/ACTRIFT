@@ -60,3 +60,5 @@ GHOSTDIFF_BROWSER_TESTS=1 python -m unittest discover -s tests -v
 Distribution artifacts are gated on CI. A maintainer can dispatch the verified-release workflow only after reviewing the exact revision's successful test/security runs. The project is an experimental preview; official publication and independent review are separate milestones.
 
 Apache-2.0. Vendored benchmark sources retain their upstream licenses.
+
+New experimental commands: `ghostdiff git-bisect` provisions trusted local static Git snapshots automatically without modifying the checkout; `ghostdiff localize` ranks changed source hunks against observed error paths and action labels. [Git intelligence usage](docs/git-intelligence.md). Matching now examines stable shared-prefix contexts as well as initial actions.

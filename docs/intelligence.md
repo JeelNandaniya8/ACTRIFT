@@ -6,3 +6,5 @@
 - `ghostdiff bisect examples/revisions.json contracts.json --allow-actions --exhaustive`: provision independent local revisions yourself and substitute actual full commit SHAs and URLs. Binary mode is faster but assumes monotonic regression; exhaustive mode can detect non-monotonic behavior in the supplied list. The command does not run build scripts, checkout repositories, or certify deployed SHA identity. Use disposable synthetic apps only.
 
 Each output is versioned JSON and can be saved with --out. Do not share raw evidence without review.
+
+Context matching now examines stable shared journey prefixes with the same observed route. Exact final-step deltas are stronger than partial candidates; partial candidates need shared non-text behavior and normalized text overlap. All hypotheses are review-only. See [Git intelligence](git-intelligence.md) for static snapshot automation and source-hunk ranking.

@@ -12,3 +12,5 @@ A second historical example, the MDN missing-MessagePort fix, is exercised by `p
 
 ## GHOSTBENCH summary
 Run `python benchmarks/ghostbench.py --suite core --out ghostbench-core.json` after producing the five core reports, and `--suite scale --out ghostbench-scale.json` after the two scaling reports. Missing/invalid/failed reports fail the gate. This is a reproducibility manifest, not a 100-defect corpus or a generalized detection-rate estimate.
+
+The htmx historical suite tests the documented special-character ID out-of-band swap bug against two original pinned JavaScript revisions and a fixed-versus-fixed control using a real local HTTP response. This expands GHOSTBENCH to an additional upstream project. It is still a selected small corpus, not broad production validation.
