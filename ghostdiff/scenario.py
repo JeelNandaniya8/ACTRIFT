@@ -25,8 +25,8 @@ def parse_spec(spec):
             if not isinstance(step,dict):
                 raise ValueError("Invalid journey step")
             kind=step.get("action")
-            if kind=="fill" and set(step)=={"action","name","value"}:
-                path.append(Action("textbox",step["name"]))
+            if kind=="fill" and set(step) in ({"action","name","value"},{"action","name","value","role"}):
+                path.append(Action(step.get("role","textbox"),step["name"]))
                 values[i]=step["value"]
             elif kind=="click" and set(step)=={"action","role","name"} and step["role"] in ("button","link"):
                 path.append(Action(step["role"],step["name"]))

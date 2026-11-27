@@ -32,3 +32,5 @@ For a reviewed rename, provide a JSON file:
 ```
 
 Pass it to `ghostdiff verify contracts-v3.json --target http://127.0.0.1:3001 --allow-actions --aliases aliases.json`. The exact replacement action is clicked only when the developer explicitly provides the mapping. Outcome assertions are unchanged, and evidence records the executed path. This does not prove semantic equivalence; it simply allows reviewed renames to be tested.
+
+Healthy older revision-3 contracts remain readable. New action-time HTTP failure evidence is optional when no failures occur; a baseline with observed HTTP failures cannot be frozen or recaptured as healthy. Older contracts do not prove those failures were absent when originally captured.

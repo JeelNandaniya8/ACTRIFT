@@ -119,6 +119,7 @@ jobs:
           python-version: '3.12'
       - run: pip install build
       - run: python -m build
+      - run: (cd dist && sha256sum *.whl *.tar.gz > SHA256SUMS)
       - run: |
           python -m venv /tmp/ghostdiff-wheel-check
           /tmp/ghostdiff-wheel-check/bin/pip install dist/*.whl

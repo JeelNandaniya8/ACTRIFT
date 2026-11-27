@@ -1,6 +1,9 @@
 # Changelog
 
-## Unreleased — practical controls
+## 0.5.0 — practical controls preview
+
+- Observe reproducible action-time document/API server failures even without visible UI changes.
+- Support explicit native searchbox inputs.
 
 - Added explicit synthetic form journeys, local storage-state scope checks and unique CI report directories.
 - Added composite-action smoke tests and an opt-in same-repository PR comment recipe.

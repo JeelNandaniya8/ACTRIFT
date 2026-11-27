@@ -15,3 +15,5 @@ ghostdiff journey examples/search-journey.json --before http://127.0.0.1:3000 --
 ```
 
 Provide named synthetic fill/click/reload steps. Supports accessible textboxes with ordinary text, email, search, URL or telephone inputs; some browser controls require different roles and are not supported. Password-like fields and risky actions are excluded by heuristic. Non-read HTTP methods remain blocked. Storage state is checked against the local origin and cookie host. Never use secrets or personal data in specifications. Rendered input may appear in evidence. Replay using the original specification; discovery contracts cannot freeze scenario evidence.
+
+For a native search input, set `"role": "searchbox"` on the explicit fill step. The default is `textbox`. Both use exact accessible names and the same synthetic-input restrictions.

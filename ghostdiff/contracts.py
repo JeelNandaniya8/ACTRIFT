@@ -29,7 +29,7 @@ def freeze(evidence):
         if len({signature(r) for r in runs}) != 1:
             continue
         expected = outcomes(runs[0])
-        if any(o.get("page_errors") for o in expected) or not any(has_signal(o) for o in expected):
+        if any((o.get("page_errors") or o.get("http_errors")) for o in expected) or not any(has_signal(o) for o in expected):
             continue
         key = sha256(stable_json(path).encode()).hexdigest()[:16]
         contracts.append({"id":key,"path":path,"expected":expected})
@@ -154,7 +154,7 @@ def recapture(data,target,executable=None,storage_state=None):
                     failures.append(item["id"])
                     continue
                 actual=outcomes(result)
-                if len(actual)!=len(item["expected"]) or any(o.get("page_errors") for o in actual) or not any(has_signal(o) for o in actual):
+                if len(actual)!=len(item["expected"]) or any((o.get("page_errors") or o.get("http_errors")) for o in actual) or not any(has_signal(o) for o in actual):
                     failures.append(item["id"])
                     continue
                 if any(any(k not in new or new[k]!=v for k,v in old.items()) for old,new in zip(item["expected"],actual)):

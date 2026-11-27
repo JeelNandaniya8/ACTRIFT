@@ -38,3 +38,10 @@ class BrowserScenarioTests(unittest.TestCase):
         spec={"schema":"ghostdiff.journeys/v1","journeys":[{"name":"Blocked","steps":[{"action":"fill","name":"Password","value":"dummy"}]}]}
         with serve(html) as a,serve(html) as b:
             self.assertEqual(run_journeys(spec,a,b)["summary"],{"inconclusive":1})
+
+    def test_native_searchbox(self):
+        spec=copy.deepcopy(SPEC)
+        spec["journeys"][0]["steps"][0]["role"]="searchbox"
+        html=b"""<html><body><label>Query<input type="search" id="q"></label><button onclick="document.querySelector('p').textContent=document.querySelector('#q').value">Search</button><p>Ready</p></body></html>"""
+        with serve(html) as a,serve(html) as b:
+            self.assertEqual(run_journeys(spec,a,b,Settings(settle_ms=100))["summary"],{"equivalent_observed":1})

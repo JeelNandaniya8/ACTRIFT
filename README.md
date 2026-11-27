@@ -99,3 +99,7 @@ Risky action names are skipped by default; custom exclusions and text masks redu
 Use `ghostdiff journey` with a reviewed [JSON specification](examples/search-journey.json) for synthetic textbox inputs and named actions. See [usage and restrictions](docs/safety-and-auth.md).
 
 The reusable GitHub Action now emits a numeric summary for an optional maintainer-authorized PR comment. The action smoke workflow checks a clean redesign and a deliberately broken candidate before packaging.
+
+## Hidden server failures
+
+Repeated action-time HTTP 5xx responses from fetch/XHR and HTTP 4xx/5xx document responses are recorded even if the rendered text does not change. Initial-load failures and unhealthy baseline journeys are inconclusive. API 4xx and static resource failures are not classified automatically; expected negative tests may need manual review. Request query strings and bodies are not included in this HTTP error evidence. Explicit form specifications can select native search inputs with `"role": "searchbox"`.

@@ -154,7 +154,12 @@ def delta(before, after, downloads):
 
 
 def has_signal(outcome):
-    return any(outcome.get(key) for key in ("text_added", "text_removed", "route_change", "downloads", "actions_added", "actions_removed", "page_errors"))
+    return any(outcome.get(key) for key in ("text_added", "text_removed", "route_change", "downloads", "actions_added", "actions_removed", "page_errors", "http_errors"))
+
+
+def http_failure(resource_type, status):
+    """Observe server failures in API requests and failed document navigation."""
+    return (resource_type == "document" and status >= 400) or (resource_type in ("fetch","xhr") and status >= 500)
 
 
 def validate_path(path, cfg, form_values=None):
@@ -162,7 +167,7 @@ def validate_path(path, cfg, form_values=None):
         raise ValueError("Journey exceeds configured depth")
     form_values=form_values or {}
     for i,a in enumerate(path):
-        allowed=("textbox",) if i in form_values else ("button","link","reload")
+        allowed=("textbox","searchbox") if i in form_values else ("button","link","reload")
         if a.role not in allowed or not isinstance(a.name, str) or not 1 <= len(a.name) <= 120:
             raise ValueError("Unsupported action in journey")
         if i in form_values and (not isinstance(form_values[i],str) or len(form_values[i])>500):
@@ -180,6 +185,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
     blocked = []
     downloads = []
     page_errors = []
+    http_errors = []
     pages = []
     steps = []
 
@@ -198,6 +204,12 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
     def on_download(item):
         downloads.append(item)
 
+    def on_response(response):
+        kind=response.request.resource_type
+        if http_failure(kind,response.status):
+            # Do not retain query strings, request bodies, headers or credentials.
+            http_errors.append({"resource":kind,"status":response.status,"path":urlsplit(response.url).path[:300]})
+
     def watch(page):
         pages.append(page)
         page.on('download', on_download)
@@ -206,6 +218,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
     context.route('**/*', gate)
     if hasattr(context, 'route_web_socket'):
         context.route_web_socket('**/*', lambda ws: (blocked.append('WebSocket'), ws.close()))
+    context.on('response', on_response)
     context.on('page', watch)
     page = context.new_page()
     page.set_default_timeout(cfg.timeout_ms)
@@ -221,10 +234,13 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
         initial = snapshot(page,cfg)
         if page_errors:
             return {"status":"inconclusive", "reason":"Uncaught exception during initial load", "page_errors":page_errors[:20], "steps":steps}
+        if http_errors:
+            return {"status":"inconclusive","reason":"HTTP failure during initial load","http_errors":http_errors[:20],"steps":steps}
         previous = initial
         for i, action in enumerate(path):
             downloads.clear()
             page_errors.clear()
+            http_errors.clear()
             if action.role == 'reload':
                 response = page.reload(wait_until='domcontentloaded', timeout=cfg.timeout_ms)
                 if response is None or not response.ok:
@@ -236,7 +252,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
                     return {"status":"unmatched", "at":i, "reason":"Accessible action not found", "steps":steps, "blocked":blocked, "suggestions":suggestions(action.role,action.name,available(page))}
                 if count != 1 or not locator.is_visible() or not locator.is_enabled():
                     return {"status":"inconclusive", "at":i, "reason":"Ambiguous, hidden or disabled action", "steps":steps, "blocked":blocked}
-                if action.role=="textbox":
+                if action.role in ("textbox","searchbox"):
                     typ=(locator.get_attribute("type") or "text").casefold()
                     if typ not in ("text","email","search","url","tel") or not locator.is_editable():
                         return {"status":"inconclusive","reason":"Unsupported or read-only form field","steps":steps}
@@ -266,6 +282,8 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
                               "format_hint":"pdf" if data.startswith(b'%PDF-') else "other"})
             outcome=delta(previous,current,files)
             outcome["page_errors"]=sorted(page_errors[:20])
+            if http_errors:
+                outcome["http_errors"]=sorted(http_errors,key=stable_json)[:20]
             steps.append({"action":asdict(action), "outcome":outcome})
             previous = current
         if blocked:
@@ -291,7 +309,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
 
 def signature(result: dict) -> str:
     if result['status'] != 'ok':
-        return stable_json({k: result.get(k) for k in ('status','at','reason','steps','suggestions','page_errors','blocked')})
+        return stable_json({k: result.get(k) for k in ('status','at','reason','steps','suggestions','page_errors','http_errors','blocked')})
     return stable_json({k:result[k] for k in ('initial','final','steps')})
 
 
@@ -310,10 +328,12 @@ def compare_path(before, after):
     aout,bout = [x['outcome'] for x in a['steps']], [x['outcome'] for x in b['steps']]
     if not aout and not bout:
         return 'inventory', 'Initial accessible-action inventory; no action executed'
-    if any(o.get('page_errors') for o in aout):
-        return 'inconclusive','Baseline journey raised an uncaught exception; cannot establish a healthy baseline'
+    if any(o.get('page_errors') or o.get('http_errors') for o in aout):
+        return 'inconclusive','Baseline journey raised an exception or HTTP failure; cannot establish a healthy baseline'
     if any(o.get('page_errors') for o in bout):
         return 'behavior_changed','Candidate journey raised a reproducible uncaught exception'
+    if any(o.get('http_errors') for o in bout):
+        return 'behavior_changed','Candidate journey produced a reproducible HTTP failure'
     if aout == bout:
         if not any(has_signal(o) for o in aout):
             return 'unobserved','Both paths executed, but neither produced a supported observable change'
