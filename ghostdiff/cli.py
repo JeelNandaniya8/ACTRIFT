@@ -15,6 +15,8 @@ from .gate import exit_code
 from .intelligence import fingerprint,match_renames
 from .diagnostics import diagnose
 from .bisect import bisect
+from .gitintel import git_bisect
+from .sourceintel import localize
 
 def report_html(report):
     escape = lambda x: html.escape(str(x))
@@ -99,20 +101,28 @@ def main(argv=None):
     p.add_argument("evidence");p.add_argument("--out")
     p=sub.add_parser("bisect",help="Locate regression among pre-provisioned ordered local revisions")
     p.add_argument("manifest");p.add_argument("contracts");p.add_argument("--allow-actions",action="store_true");p.add_argument("--exhaustive",action="store_true");p.add_argument("--out")
+    p=sub.add_parser("git-bisect",help="Automatically serve and test local static Git revisions")
+    p.add_argument("repo");p.add_argument("--good",required=True);p.add_argument("--bad",required=True);p.add_argument("--site",default=".");p.add_argument("--contracts");p.add_argument("--allow-actions",action="store_true");p.add_argument("--exhaustive",action="store_true");p.add_argument("--out")
+    p=sub.add_parser("localize",help="Correlate observed divergence with changed Git source hunks")
+    p.add_argument("evidence");p.add_argument("--repo",required=True);p.add_argument("--good",required=True);p.add_argument("--bad",required=True);p.add_argument("--out")
     a=parser.parse_args(argv)
     try:
-        if a.command in ("fingerprint","match","diagnose","bisect"):
+        if a.command in ("fingerprint","match","diagnose","bisect","git-bisect","localize"):
             def load(path):return json.loads(Path(path).read_text(encoding="utf-8"))
             if a.command=="fingerprint": result=fingerprint(load(a.evidence),a.side)
             elif a.command=="match": result=match_renames(load(a.forward),load(a.reverse))
             elif a.command=="diagnose": result=diagnose(load(a.evidence))
+            elif a.command=="localize": result=localize(a.repo,a.good,a.bad,load(a.evidence))
+            elif a.command=="git-bisect":
+                if not a.allow_actions:parser.error("git-bisect requires --allow-actions")
+                result=git_bisect(a.repo,a.good,a.bad,a.site,load(a.contracts) if a.contracts else None,a.exhaustive)
             else:
                 if not a.allow_actions: parser.error("bisect requires --allow-actions")
                 result=bisect(load(a.manifest),load(a.contracts),a.exhaustive)
             encoded=json.dumps(result,indent=2,ensure_ascii=False)
             if a.out:Path(a.out).write_text(encoded,encoding="utf-8")
             else:print(encoded)
-            return 2 if a.command=="bisect" and result["boundary"] is None else 0
+            return 2 if a.command in ("bisect","git-bisect") and result["boundary"] is None else 0
         if a.command=="journey":
             if not a.allow_actions: parser.error("journey requires --allow-actions")
             report=run_journeys(json.loads(Path(a.spec).read_text(encoding="utf-8")),a.before,a.after,Settings(screenshots=a.screenshots),a.before_state,a.after_state)
