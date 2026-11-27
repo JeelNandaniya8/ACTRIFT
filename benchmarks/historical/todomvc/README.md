@@ -1,0 +1,4 @@
+# TodoMVC historical app regression
+
+Source: https://github.com/tastejs/todomvc/commit/1e0e19087fd48bf48a37a742ef4e550019964619
+Buggy parent: 22587178cbae854290413e68faa6627a7a64677a. Original VanillaJS app HTML, JS and CSS from the fixed revision are retained under the upstream MIT license. The buggy revision uses the original parent controller.js in place of the fixed controller. The local harness seeds synthetic active and completed tasks in browser storage. It serves only the vendored text assets; optional background image and learning sidebar assets are omitted. No external resources are intentionally used. This is a multi-file historical reference application, not a production-scale SaaS corpus. The documented upstream defect was clearing completed items while viewing active tasks, causing an exception.
