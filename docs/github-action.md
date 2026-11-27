@@ -32,3 +32,5 @@ The action emits a fixed-label numeric summary. If a maintainer explicitly grant
 ```
 
 The preceding comparison step must have id: ghostdiff. Use a trusted workflow and minimal permissions; comments require pull-requests: write and a token permitted to comment. Do not execute untrusted candidate code in a privileged pull_request_target workflow. The main action never requests write access. The example is not enabled automatically.
+
+Set `require-complete: 'true'` to reject budget-omitted, skipped and unobserved journeys in addition to observed changes. The action uses summary-only console output by default; artifacts still contain raw evidence and remain opt-in. Coverage counts are reported in the job summary. Stable baseline-only action inventory entries fail the default gate even when the relevant path was not executed.

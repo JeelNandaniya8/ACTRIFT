@@ -103,3 +103,7 @@ The reusable GitHub Action now emits a numeric summary for an optional maintaine
 ## Hidden server failures
 
 Repeated action-time HTTP 5xx responses from fetch/XHR and HTTP 4xx/5xx document responses are recorded even if the rendered text does not change. Initial-load failures and unhealthy baseline journeys are inconclusive. API 4xx and static resource failures are not classified automatically; expected negative tests may need manual review. Request query strings and bodies are not included in this HTTP error evidence. Explicit form specifications can select native search inputs with `"role": "searchbox"`.
+
+## Coverage and CI policy
+
+`--fail-on-change` also rejects stable baseline-only action inventory entries, even when the path budget prevented clicking them. Such entries may indicate a rename, not necessarily a broken action. `--require-complete` additionally rejects skipped actions, budget-omitted branches and unobserved journeys within the selected depth. Depth frontiers remain explicit and are not proof of full coverage. `--summary-only` suppresses individual action names in console output, not in saved reports.

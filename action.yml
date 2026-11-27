@@ -13,6 +13,9 @@ inputs:
   budget:
     description: Maximum explored paths
     default: '30'
+  require-complete:
+    description: Reject skipped, budget-omitted or unobserved journeys within selected depth
+    default: 'false'
   upload-report:
     description: Upload reports containing observed application data (synthetic data only)
     default: 'false'
@@ -40,12 +43,15 @@ runs:
         AFTER: ${{ inputs.after }}
         DEPTH: ${{ inputs.depth }}
         BUDGET: ${{ inputs.budget }}
+        REQUIRE_COMPLETE: ${{ inputs.require-complete }}
       run: |
         out=$(mktemp -d "$RUNNER_TEMP/ghostdiff-evidence.XXXXXX")
         echo "report-dir=$out" >> "$GITHUB_OUTPUT"
         echo "artifact-id=$(basename "$out")" >> "$GITHUB_OUTPUT"
+        flags=()
+        if [ "$REQUIRE_COMPLETE" = true ]; then flags+=(--require-complete); fi
         set +e
-        ghostdiff compare --before "$BEFORE" --after "$AFTER" --depth "$DEPTH" --budget "$BUDGET" --allow-actions --fail-on-change --out "$out"
+        ghostdiff compare --before "$BEFORE" --after "$AFTER" --depth "$DEPTH" --budget "$BUDGET" --allow-actions --fail-on-change --summary-only "${flags[@]}" --out "$out"
         status=$?
         set -e
         python "$GITHUB_ACTION_PATH/scripts/ci_summary.py" "$out/evidence.json" >> "$GITHUB_STEP_SUMMARY"

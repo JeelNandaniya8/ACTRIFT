@@ -11,6 +11,7 @@ from .contracts import freeze, verify, generate_test, recapture
 from .observatory import render_observatory
 from .report_media import screenshots, without_images
 from .scenario import run_journeys
+from .gate import exit_code
 
 def report_html(report):
     escape = lambda x: html.escape(str(x))
@@ -19,17 +20,19 @@ def report_html(report):
         title = row.get("name") or " / ".join(a["name"] for a in row["path"]) or "Initial inventory"
         evidence = json.dumps({"baseline":without_images(row["before"]),"candidate":without_images(row["after"])}, indent=2, ensure_ascii=False)
         rows.append(f'<details><summary>{i:02d} · {escape(title)} <b>{escape(row["status"])}</b></summary><p>{escape(row["reason"])}</p>{screenshots(row)}<pre>{escape(evidence)}</pre></details>')
-    return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ghostdiff evidence</title><style>body{font:16px/1.6 system-ui;margin:40px auto;max-width:960px;padding:0 20px;color:#26352f;background:#faf9f6}h1{font-size:3rem;letter-spacing:-.05em}details{border-top:1px solid #bbc5bd;padding:16px 0}summary{cursor:pointer}b{float:right;color:#315c50}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#edf0ec;padding:16px}footer{margin-top:36px}</style><h1>Behavior, compared.</h1><p>GHOSTDIFF / EVIDENCE V1</p><p>'+escape(report["before_url"])+' → '+escape(report["after_url"])+'</p><pre>'+escape(json.dumps(report["summary"],indent=2))+'</pre>'+''.join(rows)+'<footer>'+escape(report["limits"])+'</footer></html>'
+    return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ghostdiff evidence</title><style>body{font:16px/1.6 system-ui;margin:40px auto;max-width:960px;padding:0 20px;color:#26352f;background:#faf9f6}h1{font-size:3rem;letter-spacing:-.05em}details{border-top:1px solid #bbc5bd;padding:16px 0}summary{cursor:pointer}b{float:right;color:#315c50}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#edf0ec;padding:16px}footer{margin-top:36px}</style><h1>Behavior, compared.</h1><p>GHOSTDIFF / EVIDENCE V1</p><p>'+escape(report["before_url"])+' → '+escape(report["after_url"])+'</p><pre>'+escape(json.dumps(report["summary"],indent=2))+'</pre><h2>Exploration coverage</h2><pre>'+escape(json.dumps(report.get("coverage",{}),indent=2))+'</pre><details><summary>Baseline-only actions (review)</summary><pre>'+escape(json.dumps(report.get("baseline_only_actions",[]),indent=2))+'</pre></details>'+''.join(rows)+'<footer>'+escape(report["limits"])+'</footer></html>'
 
-def save(report, target):
+def save(report, target, summary_only=False):
     out=Path(target)
     out.mkdir(parents=True,exist_ok=True)
     (out/"evidence.json").write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding="utf-8")
     (out/"report.html").write_text(report_html(report),encoding="utf-8")
     (out/"observatory.html").write_text(render_observatory(report),encoding="utf-8")
-    for i,row in enumerate(report["paths"]):
-        print(i,row["status"]," > ".join(x["name"] for x in row["path"]) or "Initial inventory")
+    if not summary_only:
+        for i,row in enumerate(report["paths"]):
+            print(i,row["status"]," > ".join(x["name"] for x in row["path"]) or "Initial inventory")
     print("Summary:",json.dumps(report["summary"],sort_keys=True))
+    print("Coverage:",json.dumps(report.get("coverage",{}),sort_keys=True))
     print("Report:",out/"report.html")
 
 def main(argv=None):
@@ -45,6 +48,7 @@ def main(argv=None):
         p.add_argument("--browser-executable")
         p.add_argument("--browser",choices=("chromium","firefox","webkit"),default="chromium")
         p.add_argument("--out",default="ghostdiff-report")
+        p.add_argument("--summary-only",action="store_true",help="Suppress observed action names in console output")
         p.add_argument("--ignore",action="append",default=[],help="Comma-separated exact action names to skip; repeatable")
         p.add_argument("--mask-text",action="append",default=[],help="CSS selector to exclude from text observations; repeatable")
         p.add_argument("--screenshots",action="store_true",help="Capture viewport images; may contain sensitive data")
@@ -57,6 +61,7 @@ def main(argv=None):
             p.add_argument("--allow-actions",action="store_true")
             p.add_argument("--allow-writes",action="store_true")
             p.add_argument("--fail-on-change",action="store_true")
+            p.add_argument("--require-complete",action="store_true",help="Also fail on skipped, budget-omitted or unobserved journeys within selected depth")
         else:
             p.add_argument("--clean",action="store_true")
     p=sub.add_parser("doctor",help="Check browser installation and launch")
@@ -142,11 +147,9 @@ def main(argv=None):
         else:
             if not a.allow_actions: parser.error("compare requires --allow-actions")
             report=compare(a.before,a.after,cfg,a.before_state,a.after_state)
-        save(report,a.out)
-        if getattr(a,"fail_on_change",False):
-            if report["summary"].get("inconclusive"): return 2
-            if any(report["summary"].get(k) for k in ("unmatched","behavior_changed","download_changed")): return 1
-            if not report["summary"].get("equivalent_observed"): return 2
+        save(report,a.out,a.summary_only)
+        if getattr(a,"fail_on_change",False) or getattr(a,"require_complete",False):
+            return exit_code(report,strict=a.require_complete)
         return 0
     except KeyboardInterrupt:
         print("ghostdiff: interrupted; no complete result",file=sys.stderr)

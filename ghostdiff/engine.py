@@ -350,7 +350,10 @@ def compare(before_url: str, after_url: str, cfg: Settings, before_state=None, a
     queue = deque([()])
     seen_paths = {()}
     candidate_only = []
+    baseline_only = []
     skipped = []
+    omitted_budget = 0
+    depth_frontiers = 0
     with sync_playwright() as p:
         browser = launch_browser(p,cfg)
         try:
@@ -365,7 +368,13 @@ def compare(before_url: str, after_url: str, cfg: Settings, before_state=None, a
                     aa={Action(**x) for x in a['final']['actions']}; ba={Action(**x) for x in b['final']['actions']}
                     for action in sorted(ba-aa):
                         candidate_only.append({"path":[asdict(x) for x in path],"action":asdict(action)})
-                if a['status'] != 'ok' or len(path)>=cfg.depth or len({signature(r) for r in before})!=1:
+                    for action in sorted(aa-ba):
+                        if not ignored(action,cfg):
+                            baseline_only.append({"path":[asdict(x) for x in path],"action":asdict(action)})
+                if a['status'] != 'ok' or len({signature(r) for r in before})!=1:
+                    continue
+                if len(path)>=cfg.depth:
+                    depth_frontiers += 1
                     continue
                 acts = [Action(**x) for x in a['final']['actions']]
                 if path and path[-1].role != 'reload':
@@ -375,13 +384,17 @@ def compare(before_url: str, after_url: str, cfg: Settings, before_state=None, a
                         skipped.append({"path":[asdict(x) for x in path],"action":asdict(action)})
                         continue
                     new = path+(action,)
-                    if new not in seen_paths and len(seen_paths)<cfg.budget:
+                    if new in seen_paths:
+                        continue
+                    if len(seen_paths)<cfg.budget:
                         seen_paths.add(new); queue.append(new)
+                    else:
+                        omitted_budget += 1
         finally:
             browser.close()
     return {"schema":"ghostdiff.evidence/v1","before_url":before_url,"after_url":after_url,
-            "observation_revision":3,"authenticated_baseline":before_state is not None,"authenticated_candidate":after_state is not None,"settings":asdict(cfg),"summary":dict(Counter(r['status'] for r in rows)),"candidate_only_actions":candidate_only,
-            "paths":rows,"skipped_actions":skipped,"coverage":{"executed_paths":len(rows),"path_budget":cfg.budget,"depth_limit":cfg.depth,"budget_reached":len(rows)>=cfg.budget},"limits":"Bounded baseline exploration without state pruning; exact accessible names; observed deltas, not proof of functional equivalence."}
+            "observation_revision":3,"authenticated_baseline":before_state is not None,"authenticated_candidate":after_state is not None,"settings":asdict(cfg),"summary":dict(Counter(r['status'] for r in rows)),"candidate_only_actions":candidate_only,"baseline_only_actions":baseline_only,
+            "paths":rows,"skipped_actions":skipped,"coverage":{"executed_paths":len(rows),"path_budget":cfg.budget,"depth_limit":cfg.depth,"budget_reached":len(rows)>=cfg.budget,"omitted_budget_branches":omitted_budget,"depth_frontiers":depth_frontiers,"skipped_action_entries":len(skipped)},"limits":"Bounded baseline exploration without state pruning; exact accessible names; observed deltas, not proof of functional equivalence."}
 
 
 def replay(before_url, after_url, path, cfg, before_state=None, after_state=None):

@@ -2,6 +2,9 @@
 
 ## 0.5.0 — practical controls preview
 
+- Report actual budget-omitted branches, depth frontiers and baseline-only action inventory.
+- Add optional strict coverage gate and summary-only CI output.
+
 - Observe reproducible action-time document/API server failures even without visible UI changes.
 - Support explicit native searchbox inputs.
 
