@@ -12,6 +12,9 @@ from .observatory import render_observatory
 from .report_media import screenshots, without_images
 from .scenario import run_journeys
 from .gate import exit_code
+from .intelligence import fingerprint,match_renames
+from .diagnostics import diagnose
+from .bisect import bisect
 
 def report_html(report):
     escape = lambda x: html.escape(str(x))
@@ -88,8 +91,28 @@ def main(argv=None):
     p.add_argument("--storage-state")
     p=sub.add_parser("journey",help="Compare explicit synthetic form journeys")
     p.add_argument("spec"); p.add_argument("--before",required=True); p.add_argument("--after",required=True); p.add_argument("--allow-actions",action="store_true"); p.add_argument("--before-state"); p.add_argument("--after-state"); p.add_argument("--screenshots",action="store_true"); p.add_argument("--out",default="journey-report")
+    p=sub.add_parser("fingerprint",help="Hash stable observed behavior")
+    p.add_argument("evidence");p.add_argument("--side",choices=("before","after"),default="before");p.add_argument("--out")
+    p=sub.add_parser("match",help="Review rename hypotheses from forward and reverse evidence")
+    p.add_argument("forward");p.add_argument("reverse");p.add_argument("--out")
+    p=sub.add_parser("diagnose",help="Locate first observed divergences")
+    p.add_argument("evidence");p.add_argument("--out")
+    p=sub.add_parser("bisect",help="Locate regression among pre-provisioned ordered local revisions")
+    p.add_argument("manifest");p.add_argument("contracts");p.add_argument("--allow-actions",action="store_true");p.add_argument("--exhaustive",action="store_true");p.add_argument("--out")
     a=parser.parse_args(argv)
     try:
+        if a.command in ("fingerprint","match","diagnose","bisect"):
+            def load(path):return json.loads(Path(path).read_text(encoding="utf-8"))
+            if a.command=="fingerprint": result=fingerprint(load(a.evidence),a.side)
+            elif a.command=="match": result=match_renames(load(a.forward),load(a.reverse))
+            elif a.command=="diagnose": result=diagnose(load(a.evidence))
+            else:
+                if not a.allow_actions: parser.error("bisect requires --allow-actions")
+                result=bisect(load(a.manifest),load(a.contracts),a.exhaustive)
+            encoded=json.dumps(result,indent=2,ensure_ascii=False)
+            if a.out:Path(a.out).write_text(encoded,encoding="utf-8")
+            else:print(encoded)
+            return 2 if a.command=="bisect" and result["boundary"] is None else 0
         if a.command=="journey":
             if not a.allow_actions: parser.error("journey requires --allow-actions")
             report=run_journeys(json.loads(Path(a.spec).read_text(encoding="utf-8")),a.before,a.after,Settings(screenshots=a.screenshots),a.before_state,a.after_state)
