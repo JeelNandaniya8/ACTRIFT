@@ -70,3 +70,7 @@ For stateful disposable local fixtures, explicitly enable the [backend reset pro
 Explicit JSON API comparison: `--observe-api /api/items` records bounded response status and digest evidence for selected local synthetic endpoints. See [API observation](docs/api-observation.md). `ghostdiff timeline examples/timeline.json` combines saved fingerprints across operator-supplied revisions; different scopes are marked incomparable.
 
 The portable Observatory includes status filters, journey search and coverage/performance summaries. Comparisons also save `diagnostics.json` for first-divergence inspection. Selected API requests must complete within the observation window or the result is inconclusive.
+
+### Agent-assisted workflows
+
+Use `ghostdiff agent-summary report/evidence.json --strict` to inspect existing evidence without executing browser actions. `ghostdiff agent-run examples/agent.json --allow-actions` provides a data-minimized JSON result for explicitly authorized disposable local fixtures. See [agent integration](docs/agent-integration.md). No AI model or paid API is required.

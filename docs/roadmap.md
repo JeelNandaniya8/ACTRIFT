@@ -22,3 +22,5 @@ Reviewed JSON config, optional reverse exploration, native checkbox/select/key o
 An explicit disposable backend reset protocol and SQLite integration cases are implemented experimentally. Generic backend provisioning and authenticated reset-dependent contracts remain unsupported.
 
 Explicit bounded JSON API observation and offline fingerprint history are implemented experimentally. Full API semantics, durable history storage and production validation remain open.
+
+A CLI/JSON interface for local agent orchestration has an initial implementation. A hosted service or MCP integration is not implemented.

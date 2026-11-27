@@ -1,0 +1,12 @@
+{
+  "schema": "ghostdiff.config/v1",
+  "before": "http://127.0.0.1:3000",
+  "after": "http://127.0.0.1:3001",
+  "settings": {
+    "depth": 1,
+    "budget": 8,
+    "repeats": 2
+  },
+  "bidirectional": false,
+  "strict": true
+}

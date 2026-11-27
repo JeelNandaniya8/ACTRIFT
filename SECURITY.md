@@ -21,3 +21,5 @@ Observation resource limits: 5,000 candidate DOM elements, 256 unique named acti
 The optional reset protocol intentionally sends a POST to a fixed endpoint on explicitly authorized numeric-loopback HTTP test servers. It does not follow redirects, requires a 204 receipt, and is disabled by default. Never enable it on production infrastructure. See docs/backend-reset.md.
 
 API digest collection is opt-in and limited to explicitly selected local synthetic paths. Digests are not encryption or anonymization; browser response retrieval is not a network/resource sandbox. Never select real customer or credential-bearing endpoints.
+
+Agent summaries exclude observed strings, paths, URLs, screenshots, response digests and raw exception content. This does not attest evidence provenance. Agent execution requires explicit action authorization and read-policy configuration; raw evidence is saved only when requested. Do not grant unattended access to production infrastructure.

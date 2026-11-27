@@ -19,6 +19,7 @@ from .gitintel import git_bisect
 from .sourceintel import localize
 from .config import parse_config
 from .history import timeline
+from .agent import summarize as agent_summary
 
 def report_html(report):
     escape = lambda x: html.escape(str(x))
@@ -115,7 +116,37 @@ def main(argv=None):
     p.add_argument("config");p.add_argument("--allow-actions",action="store_true");p.add_argument("--out",default="ghostdiff-report")
     p=sub.add_parser("timeline",help="Compare scoped fingerprints in an ordered local history")
     p.add_argument("manifest");p.add_argument("--out")
+    p=sub.add_parser("agent-summary",help="Emit a data-minimized machine-readable evidence summary")
+    p.add_argument("evidence");p.add_argument("--strict",action="store_true")
+    p=sub.add_parser("agent-run",help="Run an explicitly authorized local comparison and emit JSON only")
+    p.add_argument("config");p.add_argument("--allow-actions",action="store_true");p.add_argument("--evidence-out")
     a=parser.parse_args(argv)
+    if a.command in ("agent-summary","agent-run"):
+        try:
+            if a.command=="agent-summary":
+                path=Path(a.evidence)
+                if path.stat().st_size>32*1024*1024:raise ValueError("Evidence too large")
+                result=agent_summary(json.loads(path.read_text(encoding="utf-8")),a.strict)
+            else:
+                if not a.allow_actions:raise ValueError("Explicit authorization required")
+                path=Path(a.config)
+                if path.stat().st_size>65536:raise ValueError("Config too large")
+                before,after,cfg,bidirectional,strict=parse_config(json.loads(path.read_text(encoding="utf-8")))
+                if bidirectional or cfg.screenshots:raise ValueError("Agent runs require forward-only, screenshot-free configuration")
+                if a.evidence_out and Path(a.evidence_out).exists():raise ValueError("Evidence destination already exists")
+                report=compare(before,after,cfg)
+                result=agent_summary(report,strict)
+                if a.evidence_out:
+                    with Path(a.evidence_out).open("x",encoding="utf-8") as fp:
+                        json.dump(report,fp,ensure_ascii=False,indent=2)
+            print(json.dumps(result,sort_keys=True))
+            return result["exit_code"]
+        except KeyboardInterrupt:
+            print(json.dumps({"schema":"ghostdiff.agent-result/v1","execution_status":"interrupted","exit_code":130}))
+            return 130
+        except (ValueError,OSError,KeyError,IndexError,TypeError,AttributeError,BrowserError,RecursionError):
+            print(json.dumps({"schema":"ghostdiff.agent-result/v1","execution_status":"error","exit_code":2,"reason":"Invalid input, missing authorization or execution failure"}))
+            return 2
     try:
         if a.command=="compare-config":
             if not a.allow_actions:parser.error("compare-config requires --allow-actions")
