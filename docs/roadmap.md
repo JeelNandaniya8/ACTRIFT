@@ -20,3 +20,5 @@ Fixture success is not a general accuracy rate. No independent certification or 
 PyPI trusted publishing is prepared via the maintainer-controlled workflow. See [PyPI setup](pypi.md). Registration and actual publication are separate owner actions.
 
 Network-disabled, mount-free static bundle comparison is implemented experimentally; arbitrary build provisioning and audited isolation remain open.
+
+Checksum-bound prebuilt frontend provisioning and artifact bisection are implemented experimentally. Arbitrary source builds and backend provisioning remain open.

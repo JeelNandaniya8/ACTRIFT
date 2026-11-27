@@ -9,3 +9,5 @@ Additional changes before publication: explicit test-backend reset protocol, bou
 Local agents and other automation can use a data-minimized JSON summary and explicitly authorized read-policy comparison command. No hosted agent service or external model dependency is introduced.
 
 Candidate additions include optional read-only MCP, local SQLite history, explicit source maps, a second pinned htmx historical fixture and a static project site. Verify the exact revision before publication.
+
+The candidate adds bounded static fixture interchange for the network-disabled container recipe and checksum-bound prebuilt frontend artifact bisection. Neither feature is general build execution or independent isolation certification.

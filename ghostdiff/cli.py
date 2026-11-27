@@ -16,6 +16,7 @@ from .intelligence import fingerprint,match_renames
 from .diagnostics import diagnose
 from .bisect import bisect
 from .gitintel import git_bisect
+from .build_artifacts import pack_artifact,build_bisect
 from .sourceintel import localize
 from .config import parse_config
 from .history import timeline
@@ -112,6 +113,10 @@ def main(argv=None):
     p.add_argument("manifest");p.add_argument("contracts");p.add_argument("--allow-actions",action="store_true");p.add_argument("--exhaustive",action="store_true");p.add_argument("--out")
     p=sub.add_parser("git-bisect",help="Automatically serve and test local static Git revisions")
     p.add_argument("repo");p.add_argument("--good",required=True);p.add_argument("--bad",required=True);p.add_argument("--site",default=".");p.add_argument("--contracts");p.add_argument("--allow-actions",action="store_true");p.add_argument("--exhaustive",action="store_true");p.add_argument("--out")
+    p=sub.add_parser("artifact-pack",help="Package a trusted prebuilt static frontend and print its digest")
+    p.add_argument("directory");p.add_argument("--commit",required=True);p.add_argument("--out",required=True)
+    p=sub.add_parser("build-bisect",help="Provision checksum-bound prebuilt frontend revisions and locate observed changes")
+    p.add_argument("manifest");p.add_argument("--contracts");p.add_argument("--allow-actions",action="store_true");p.add_argument("--exhaustive",action="store_true");p.add_argument("--out")
     p=sub.add_parser("localize",help="Correlate observed divergence with changed Git source hunks")
     p.add_argument("evidence");p.add_argument("--repo",required=True);p.add_argument("--good",required=True);p.add_argument("--bad",required=True);p.add_argument("--source-maps");p.add_argument("--out")
     p=sub.add_parser("compare-config",help="Compare local versions using reviewed JSON settings")
@@ -154,6 +159,17 @@ def main(argv=None):
             print(json.dumps({"schema":"ghostdiff.agent-result/v1","execution_status":"error","exit_code":2,"reason":"Invalid input, missing authorization or execution failure"}))
             return 2
     try:
+        if a.command=="artifact-pack":
+            print(json.dumps(pack_artifact(a.directory,a.commit,a.out),indent=2))
+            return 0
+        if a.command=="build-bisect":
+            if not a.allow_actions:parser.error("build-bisect requires --allow-actions")
+            contracts=json.loads(Path(a.contracts).read_text(encoding="utf-8")) if a.contracts else None
+            result=build_bisect(a.manifest,contracts,a.exhaustive)
+            encoded=json.dumps(result,indent=2,ensure_ascii=False)
+            if a.out:Path(a.out).write_text(encoded,encoding="utf-8")
+            else:print(encoded)
+            return 2 if result["boundary"] is None else 0
         if a.command=="compare-config":
             if not a.allow_actions:parser.error("compare-config requires --allow-actions")
             before,after,cfg,bidirectional,strict=parse_config(json.loads(Path(a.config).read_text(encoding="utf-8")))

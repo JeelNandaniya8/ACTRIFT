@@ -82,3 +82,5 @@ The static project website is in [site/](site/); [hosting instructions](docs/sit
 PyPI trusted publishing is prepared via the maintainer-controlled workflow. See [PyPI setup](docs/pypi.md). Registration and actual publication are separate owner actions.
 
 For prebuilt static fixture comparisons in a network-disabled container, see [the static bundle runner](sandbox/README.md). It accepts bounded asset data via stdin and returns a data-minimized verdict without mounting host directories.
+
+Use `ghostdiff artifact-pack` and `ghostdiff build-bisect` for checksum-verified prebuilt static frontend revisions. See [build artifact provisioning](docs/build-artifacts.md). Builds themselves remain the responsibility of the trusted project CI.
