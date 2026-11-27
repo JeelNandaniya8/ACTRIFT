@@ -2,6 +2,8 @@
 
 ## 0.7.0 — Git and context intelligence preview
 
+- Reject unfinished selected API responses and unhealthy baseline paths; add searchable Observatory reports and diagnostic export.
+
 - Add explicitly selected JSON API response digests and offline scoped fingerprint timelines.
 
 - Add opt-in fixed-endpoint backend reset and stateful SQLite integration coverage.

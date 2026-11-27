@@ -241,7 +241,9 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
     downloads = BoundedEvents(8)
     page_errors = BoundedEvents(20)
     http_errors = BoundedEvents(20)
-    api_pending = BoundedEvents(20)
+    api_started = BoundedEvents(20)
+    api_finished = BoundedEvents(20)
+    api_failed = BoundedEvents(20)
     error_locations = BoundedEvents(100)
     pages = BoundedEvents(2)
     steps = []
@@ -272,11 +274,29 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
         if not same_origin:
             blocked.append("Unexpected off-origin HTTP response")
         kind=response.request.resource_type
-        if same_origin and kind in ("fetch","xhr") and urlsplit(response.url).path in cfg.api_paths:
-            api_pending.append(response)
         if http_failure(kind,response.status):
             # Do not retain query strings, request bodies, headers or credentials.
             http_errors.append({"resource":kind,"status":response.status,"path":urlsplit(response.url).path[:300]})
+
+    def selected_request(request):
+        if not cfg.api_paths or request.resource_type not in ("fetch","xhr"):
+            return False
+        try:
+            return origin(request.url)==allowed and urlsplit(request.url).path in cfg.api_paths
+        except ValueError:
+            return False
+
+    def on_request(request):
+        if selected_request(request):api_started.append(request)
+
+    def on_finished(request):
+        if selected_request(request):api_finished.append(request)
+
+    def on_failed(request):
+        if selected_request(request):api_failed.append(request)
+
+    def api_complete():
+        return not any(x.overflow for x in (api_started,api_finished,api_failed)) and not api_failed and len(api_started)==len(api_finished) and set(api_started)==set(api_finished)
 
     def on_page_error(exc):
         page_errors.append(normal(str(exc))[:500])
@@ -292,6 +312,10 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
     if hasattr(context, 'route_web_socket'):
         context.route_web_socket('**/*', lambda ws: (blocked.append('WebSocket'), ws.close()))
     context.on('response', on_response)
+    if cfg.api_paths:
+        context.on('request', on_request)
+        context.on('requestfinished', on_finished)
+        context.on('requestfailed', on_failed)
     context.on('page', watch)
     page = context.new_page()
     page.set_default_timeout(cfg.timeout_ms)
@@ -309,12 +333,18 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
             return {"status":"inconclusive", "reason":"Uncaught exception during initial load", "page_errors":page_errors[:20], "steps":steps}
         if http_errors:
             return {"status":"inconclusive","reason":"HTTP failure during initial load","http_errors":http_errors[:20],"steps":steps}
+        if not api_complete():
+            return {"status":"inconclusive","reason":"Selected API request incomplete during initial load","steps":steps}
         previous = initial
         for i, action in enumerate(path):
             downloads.clear()
             page_errors.clear()
             http_errors.clear()
-            api_pending.clear()
+            if not api_complete():
+                return {"status":"inconclusive","reason":"Selected API request crossed observation boundary","steps":steps}
+            api_started.clear()
+            api_finished.clear()
+            api_failed.clear()
             error_locations.clear()
             control_change=None
             if action.role == 'reload':
@@ -364,15 +394,17 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
             if origin(page.url) != allowed:
                 return {"status":"inconclusive", "reason":"Navigation left the authorized origin", "steps":steps}
             current = snapshot(page,cfg)
-            if api_pending.overflow:
-                return {"status":"inconclusive","reason":"Selected API observation limit exceeded","steps":steps}
+            if not api_complete():
+                return {"status":"inconclusive","reason":"Selected API request unfinished, failed or over limit","steps":steps}
             api_results=[]
             try:
-                for response in api_pending[:]:
+                for request in api_finished[:]:
+                    response=request.response()
+                    if response is None:raise ValueError("Missing completed response")
                     api_results.append(observe_response(response,urlsplit(response.url).path))
             except (ValueError,UnicodeError,RecursionError,Error):
                 return {"status":"inconclusive","reason":"Selected API response could not be safely observed","steps":steps}
-            if len(api_pending)!=len(api_results) or api_pending.overflow:
+            if not api_complete() or len(api_finished)!=len(api_results):
                 return {"status":"inconclusive","reason":"Selected API observations changed during collection","steps":steps}
             if any(x.overflow for x in (downloads,page_errors,http_errors)):
                 return {"status":"inconclusive","reason":"Browser event observation limit exceeded","steps":steps}
@@ -393,6 +425,8 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
                               "format_hint":"pdf" if data.startswith(b'%PDF-') else "other"})
             if any(x.overflow for x in (downloads,page_errors,http_errors)):
                 return {"status":"inconclusive","reason":"Browser event observation limit exceeded","steps":steps}
+            if not api_complete() or len(api_finished)!=len(api_results):
+                return {"status":"inconclusive","reason":"Selected API observations changed during finalization","steps":steps}
             outcome=delta(previous,current,files)
             if api_results:outcome["api_responses"]=sorted(api_results,key=stable_json)
             if control_change is not None:outcome["control_change"]=control_change
@@ -437,6 +471,8 @@ def compare_path(before, after):
     a,b = before[0],after[0]
     if a['status'] != 'ok':
         return 'inconclusive','Baseline path did not execute reliably'
+    if any(s["outcome"].get("page_errors") or s["outcome"].get("http_errors") for s in a["steps"]):
+        return 'inconclusive','Baseline journey raised an exception or HTTP failure; cannot establish a healthy baseline'
     if b['status'] == 'unmatched' and not b.get('blocked'):
         return 'unmatched','Baseline action unavailable by its original accessible name; may be renamed or removed'
     if b['status'] != 'ok':
@@ -444,8 +480,6 @@ def compare_path(before, after):
     aout,bout = [x['outcome'] for x in a['steps']], [x['outcome'] for x in b['steps']]
     if not aout and not bout:
         return 'inventory', 'Initial accessible-action inventory; no action executed'
-    if any(o.get('page_errors') or o.get('http_errors') for o in aout):
-        return 'inconclusive','Baseline journey raised an exception or HTTP failure; cannot establish a healthy baseline'
     if any(o.get('page_errors') for o in bout):
         return 'behavior_changed','Candidate journey raised a reproducible uncaught exception'
     if any(o.get('http_errors') for o in bout):
@@ -537,7 +571,7 @@ def compare(before_url: str, after_url: str, cfg: Settings, before_state=None, a
                     for action in sorted(aa-ba):
                         if not ignored(action,cfg):
                             baseline_only.append({"path":[asdict(x) for x in path],"action":asdict(action)})
-                if a['status'] != 'ok' or len({signature(r) for r in before})!=1:
+                if a['status'] != 'ok' or len({signature(r) for r in before})!=1 or any(s["outcome"].get("page_errors") or s["outcome"].get("http_errors") for s in a["steps"]):
                     continue
                 if len(path)>=cfg.depth:
                     depth_frontiers += 1

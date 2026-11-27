@@ -35,6 +35,8 @@ def save(report, target, summary_only=False):
     (out/"evidence.json").write_text(json.dumps(report,indent=2,ensure_ascii=False),encoding="utf-8")
     (out/"report.html").write_text(report_html(report),encoding="utf-8")
     (out/"observatory.html").write_text(render_observatory(report),encoding="utf-8")
+    if report.get("schema")=="ghostdiff.evidence/v1":
+        (out/"diagnostics.json").write_text(json.dumps(diagnose(report),indent=2,ensure_ascii=False),encoding="utf-8")
     if not summary_only:
         for i,row in enumerate(report["paths"]):
             print(i,row["status"]," > ".join(x["name"] for x in row["path"]) or "Initial inventory")

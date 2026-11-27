@@ -16,7 +16,7 @@ class ApiTests(unittest.TestCase):
             with self.assertRaises(ValueError):validate_paths(paths)
 
 @contextmanager
-def fixture(body):
+def fixture(body,delay=0):
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
             if self.path=="/":
@@ -25,7 +25,12 @@ def fixture(body):
                 data=body;kind="application/json"
             else:
                 self.send_error(404);return
-            self.send_response(200);self.send_header("Content-Type",kind);self.send_header("Content-Length",str(len(data)));self.end_headers();self.wfile.write(data)
+            self.send_response(200);self.send_header("Content-Type",kind);self.send_header("Content-Length",str(len(data)));self.end_headers()
+            if self.path.startswith('/api?') and delay:
+                from time import sleep
+                sleep(delay)
+            try:self.wfile.write(data)
+            except (BrokenPipeError,ConnectionResetError):pass
         def log_message(self,*args):pass
     server=ThreadingHTTPServer(("127.0.0.1",0),Handler)
     thread=Thread(target=server.serve_forever,daemon=True);thread.start()
@@ -43,3 +48,10 @@ class ApiBrowserTests(unittest.TestCase):
         import json
         self.assertNotIn("private-fixture",json.dumps(bad))
         self.assertNotIn("fixture=hidden",json.dumps(bad))
+
+    def test_unfinished_selected_response_is_inconclusive(self):
+        with fixture(b'{"value":1}') as a,fixture(b'{"value":1}',delay=2) as b:
+            cfg=Settings(depth=1,budget=2,settle_ms=100,api_paths=("/api",))
+            result=compare(a,b,cfg)
+        self.assertEqual(result["summary"].get("inconclusive"),1)
+        self.assertNotIn("equivalent_observed",result["summary"])

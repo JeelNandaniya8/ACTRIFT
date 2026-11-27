@@ -68,3 +68,5 @@ Use `ghostdiff compare-config examples/compare.json --allow-actions` with review
 For stateful disposable local fixtures, explicitly enable the [backend reset protocol](docs/backend-reset.md) with `--reset-backend`. It requires a dedicated fixture-only endpoint and independent servers, and is not a general database reset mechanism.
 
 Explicit JSON API comparison: `--observe-api /api/items` records bounded response status and digest evidence for selected local synthetic endpoints. See [API observation](docs/api-observation.md). `ghostdiff timeline examples/timeline.json` combines saved fingerprints across operator-supplied revisions; different scopes are marked incomparable.
+
+The portable Observatory includes status filters, journey search and coverage/performance summaries. Comparisons also save `diagnostics.json` for first-divergence inspection. Selected API requests must complete within the observation window or the result is inconclusive.

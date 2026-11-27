@@ -5,3 +5,5 @@ Use `--observe-api /api/items` on disposable local apps containing synthetic dat
 This is bounded post-response inspection, not a network quota. Browser transfers may consume resources before checks and response retrieval can wait for a stalled response; use OS-level process/network limits. Hashes can expose low-entropy values through guessing, and paths/rendered content may contain sensitive data. JSON array ordering matters. Initial-load API responses and responses outside the action observation window are not compared. Do not treat digest equality as semantic equality.
 
 The selected path list is part of contract settings and fingerprint scope. The default remains no API body inspection.
+
+Only completed selected requests are inspected. A selected request that fails, exceeds the event budget or remains unfinished at the end of the observation window makes the journey inconclusive instead of waiting for its body. Initial-load selected requests must finish before action observation starts; their contents are not compared. This remains bounded timing-based observation, not a complete network trace.
