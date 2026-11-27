@@ -13,3 +13,5 @@ Storage-state JSON may contain credentials. Never commit or upload it. Optional 
 Explicit synthetic form journeys retain the default network and action restrictions. Password-like field detection is heuristic, not a guarantee. Session state is scoped to the target local origin and cookie host. Do not supply secrets or real user information.
 
 The engine also flags observed off-origin HTTP responses as inconclusive. This is a detection backstop, not prevention: a request may already have reached another origin (including redirects). Security regression tests check direct off-origin fetch blocking, default POST blocking and HTML report escaping. They are not an independent security audit.
+
+Automated security CI uses pip-audit for known dependency vulnerabilities and Bandit to produce a static-source review report. Scanner output must be reviewed; absence of findings is not proof of safety. Parallel mode uses two independent browsers and forbids write-enabled sessions, but callers must ensure the backends are truly independent.

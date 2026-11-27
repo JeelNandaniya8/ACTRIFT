@@ -24,6 +24,7 @@ jobs:
       - run: python benchmarks/upstream.py --out upstream-benchmark.json
       - run: python benchmarks/historical.py --out historical-benchmark.json
       - run: python benchmarks/channel_history.py --out channel-history.json
+      - run: python benchmarks/todomvc_history.py --out todomvc-history.json
       - run: ghostdiff demo --out demo-report
       - run: ghostdiff freeze demo-report/evidence.json --out contracts.json --test-out test_protected.py
       - run: python -m compileall -q test_protected.py
@@ -37,6 +38,7 @@ jobs:
             upstream-benchmark.json
             historical-benchmark.json
             channel-history.json
+            todomvc-history.json
             demo-report/
             contracts.json
             test_protected.py
@@ -110,8 +112,24 @@ jobs:
           test "$BROKEN" = failure
           echo "$SUMMARY" | grep -q 'download_changed: 1'
           echo "$SUMMARY" | grep -q 'unmatched: 1'
+  scalability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install -e .
+      - run: python -m playwright install --with-deps chromium
+      - run: python benchmarks/scale.py --out scale.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: scalability-measurements
+          path: scale.json
   package-preview:
-    needs: [test, cross-browser, isolated-demo, action-smoke]
+    needs: [test, cross-browser, isolated-demo, action-smoke, scalability]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:

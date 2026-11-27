@@ -33,6 +33,7 @@ def save(report, target, summary_only=False):
             print(i,row["status"]," > ".join(x["name"] for x in row["path"]) or "Initial inventory")
     print("Summary:",json.dumps(report["summary"],sort_keys=True))
     print("Coverage:",json.dumps(report.get("coverage",{}),sort_keys=True))
+    print("Performance:",json.dumps(report.get("performance",{}),sort_keys=True))
     print("Report:",out/"report.html")
 
 def main(argv=None):
@@ -48,6 +49,7 @@ def main(argv=None):
         p.add_argument("--browser-executable")
         p.add_argument("--browser",choices=("chromium","firefox","webkit"),default="chromium")
         p.add_argument("--out",default="ghostdiff-report")
+        p.add_argument("--parallel",action="store_true",help="Compare independent local versions concurrently in separate browsers")
         p.add_argument("--summary-only",action="store_true",help="Suppress observed action names in console output")
         p.add_argument("--ignore",action="append",default=[],help="Comma-separated exact action names to skip; repeatable")
         p.add_argument("--mask-text",action="append",default=[],help="CSS selector to exclude from text observations; repeatable")
@@ -139,7 +141,7 @@ def main(argv=None):
             result=replay(a.before,a.after,tuple(Action(**x) for x in row["path"]),Settings(**settings),a.before_state,a.after_state)
             print(json.dumps(result,indent=2,ensure_ascii=False))
             return 2 if result["status"]=="inconclusive" else 0
-        cfg=Settings(depth=a.depth,budget=a.budget,settle_ms=a.settle_ms,timeout_ms=a.timeout_ms,repeats=a.repeats,allow_writes=getattr(a,"allow_writes",False),executable=a.browser_executable,browser=a.browser,ignore=tuple(x.strip() for entry in a.ignore for x in entry.split(",") if x.strip()),mask_text=tuple(a.mask_text),screenshots=a.screenshots,allow_risky_actions=a.allow_risky_actions)
+        cfg=Settings(depth=a.depth,budget=a.budget,settle_ms=a.settle_ms,timeout_ms=a.timeout_ms,repeats=a.repeats,allow_writes=getattr(a,"allow_writes",False),executable=a.browser_executable,browser=a.browser,ignore=tuple(x.strip() for entry in a.ignore for x in entry.split(",") if x.strip()),mask_text=tuple(a.mask_text),screenshots=a.screenshots,allow_risky_actions=a.allow_risky_actions,parallel=a.parallel)
         if a.command=="demo":
             with serve(app()) as before, serve(app(broken=not a.clean,redesign=True)) as after:
                 report=compare(before,after,cfg)

@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 from collections import Counter, deque
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
+from time import perf_counter
 from dataclasses import asdict, dataclass, replace
 import base64
 import re
@@ -35,6 +38,7 @@ class Settings:
     mask_text: tuple[str, ...] = ()
     screenshots: bool = False
     allow_risky_actions: bool = False
+    parallel: bool = False
 
     def validate(self):
         if self.browser not in ('chromium', 'firefox', 'webkit'):
@@ -46,7 +50,7 @@ class Settings:
         for value in (self.ignore,self.mask_text):
             if not isinstance(value,(tuple,list)) or len(value)>30 or any(not isinstance(x,str) or not x.strip() or len(x)>200 for x in value):
                 raise ValueError("Invalid ignore or text-mask rules")
-        if type(self.screenshots) is not bool or type(self.allow_risky_actions) is not bool:
+        if type(self.screenshots) is not bool or type(self.allow_risky_actions) is not bool or type(self.parallel) is not bool:
             raise ValueError("Screenshot and risky-action flags must be boolean")
         for name, low, high in (("depth", 1, 5), ("budget", 1, 200),
                                 ("settle_ms", 0, 5000), ("timeout_ms", 100, 15000),
@@ -351,9 +355,48 @@ def compare_path(before, after):
     return 'behavior_changed','Observable action outcomes differ; inspect intent'
 
 
+def repeated(browser,url,path,cfg,state):
+    return [experiment(browser,url,path,replace(cfg,screenshots=cfg.screenshots and i==0),state) for i in range(cfg.repeats)]
+
+
+@contextmanager
+def candidate_worker(cfg):
+    """Optional second browser, kept on its own Playwright thread."""
+    if not cfg.parallel:
+        yield None
+        return
+    with ThreadPoolExecutor(max_workers=1,thread_name_prefix="ghostdiff-candidate") as pool:
+        state={}
+        def start():
+            p=sync_playwright().start()
+            try:
+                state["browser"]=launch_browser(p,cfg)
+                state["playwright"]=p
+            except BaseException:
+                p.stop()
+                raise
+        def stop():
+            try:
+                state["browser"].close()
+            finally:
+                state["playwright"].stop()
+        def run(url,path,storage):
+            return repeated(state["browser"],url,path,cfg,storage)
+        pool.submit(start).result()
+        try:
+            yield lambda url,path,storage: pool.submit(run,url,path,storage)
+        finally:
+            pool.submit(stop).result()
+
+
 def compare(before_url: str, after_url: str, cfg: Settings, before_state=None, after_state=None) -> dict:
     cfg.validate()
     validate_url(before_url); validate_url(after_url)
+    if cfg.parallel and origin(before_url)==origin(after_url):
+        raise ValueError("Parallel mode requires separate local origins and independent test backends")
+    if cfg.parallel and cfg.allow_writes:
+        raise ValueError("Parallel mode does not allow write-enabled runs")
+    started=perf_counter()
     rows = []
     queue = deque([()])
     seen_paths = {()}
@@ -362,13 +405,14 @@ def compare(before_url: str, after_url: str, cfg: Settings, before_state=None, a
     skipped = []
     omitted_budget = 0
     depth_frontiers = 0
-    with sync_playwright() as p:
+    with sync_playwright() as p, candidate_worker(cfg) as submit:
         browser = launch_browser(p,cfg)
         try:
             while queue and len(rows) < cfg.budget:
                 path = queue.popleft()
-                before = [experiment(browser,before_url,path,replace(cfg,screenshots=cfg.screenshots and i==0),before_state) for i in range(cfg.repeats)]
-                after = [experiment(browser,after_url,path,replace(cfg,screenshots=cfg.screenshots and i==0),after_state) for i in range(cfg.repeats)]
+                pending=submit(after_url,path,after_state) if submit else None
+                before=repeated(browser,before_url,path,cfg,before_state)
+                after=pending.result() if pending else repeated(browser,after_url,path,cfg,after_state)
                 status,reason = compare_path(before,after)
                 a,b = before[0],after[0]
                 rows.append({"path":[asdict(x) for x in path],"status":status,"reason":reason,"before":before,"after":after})
@@ -400,7 +444,8 @@ def compare(before_url: str, after_url: str, cfg: Settings, before_state=None, a
                         omitted_budget += 1
         finally:
             browser.close()
-    return {"schema":"ghostdiff.evidence/v1","before_url":before_url,"after_url":after_url,
+    elapsed=perf_counter()-started
+    return {"schema":"ghostdiff.evidence/v1","performance":{"elapsed_seconds":round(elapsed,3),"paths_per_second":round(len(rows)/max(elapsed,0.001),3),"parallel":cfg.parallel},"before_url":before_url,"after_url":after_url,
             "observation_revision":3,"authenticated_baseline":before_state is not None,"authenticated_candidate":after_state is not None,"settings":asdict(cfg),"summary":dict(Counter(r['status'] for r in rows)),"candidate_only_actions":candidate_only,"baseline_only_actions":baseline_only,
             "paths":rows,"skipped_actions":skipped,"coverage":{"executed_paths":len(rows),"path_budget":cfg.budget,"depth_limit":cfg.depth,"budget_reached":len(rows)>=cfg.budget,"omitted_budget_branches":omitted_budget,"depth_frontiers":depth_frontiers,"skipped_action_entries":len(skipped)},"limits":"Bounded baseline exploration without state pruning; exact accessible names; observed deltas, not proof of functional equivalence."}
 

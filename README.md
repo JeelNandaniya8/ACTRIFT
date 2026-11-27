@@ -109,3 +109,7 @@ Repeated action-time HTTP 5xx responses from fetch/XHR and HTTP 4xx/5xx document
 `--fail-on-change` also rejects stable baseline-only action inventory entries, even when the path budget prevented clicking them. Such entries may indicate a rename, not necessarily a broken action. `--require-complete` additionally rejects skipped actions, budget-omitted branches and unobserved journeys within the selected depth. Depth frontiers remain explicit and are not proof of full coverage. `--summary-only` suppresses individual action names in console output, not in saved reports.
 
 The [security self-review](docs/security-review.md) records tested controls and remaining risks. The historical benchmark suite now includes a second pinned upstream example with a fixed-versus-fixed control. Latest results are available in CI; this is not a production-scale accuracy or security claim.
+
+## Performance and scaling
+
+Use `--parallel` to compare two independent disposable local versions in separate browser instances concurrently. It is opt-in, read-policy only, and rejects a shared origin. Distinct origins do not guarantee independent backend state. Every explored path still has repeated fresh-context observations. Reports record elapsed seconds and paths per second; `python benchmarks/scale.py` measures sequential versus parallel operation for 8, 24 and 64 synthetic actions, including coverage truncation and verdict agreement. No fixed speedup is claimed until measured.

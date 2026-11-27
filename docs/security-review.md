@@ -12,3 +12,5 @@ Scope: local disposable synthetic applications. Trust boundary: browser, local a
 | Local storage state scope | Origin and cookie-host checks | Cookies may be sensitive; host scope is not port isolation |
 
 Independent review, dedicated VM isolation, production data handling, resource exhaustion testing and comprehensive browser network analysis remain open. Never present these checks as certification.
+
+Additional automated checks: pip-audit against the installed application dependencies and a Bandit source scan. Inspect the security workflow artifacts and triage findings before release. These tools are third-party scanners, not a third-party human audit. No independent auditor has been engaged.

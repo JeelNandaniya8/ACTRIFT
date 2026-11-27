@@ -1,0 +1,31 @@
+name: Automated security checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  dependency-and-source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: |
+          python -m venv /tmp/ghostdiff-audit-env
+          /tmp/ghostdiff-audit-env/bin/pip install -e .
+          /tmp/ghostdiff-audit-env/bin/pip freeze --exclude-editable > audit-requirements.txt
+          python -m pip install pip-audit bandit
+      - name: Known dependency vulnerabilities
+        run: pip-audit --no-deps -r audit-requirements.txt --format json --output dependency-audit.json
+      - name: Static source scan (review report)
+        if: always()
+        run: bandit -r ghostdiff -f json -o source-audit.json --exit-zero
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: automated-security-evidence
+          path: |
+            audit-requirements.txt
+            dependency-audit.json
+            source-audit.json

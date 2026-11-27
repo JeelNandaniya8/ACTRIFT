@@ -2,6 +2,10 @@
 
 ## 0.5.0 — practical controls preview
 
+- Added a pinned historical TodoMVC application regression benchmark.
+- Added optional parallel version comparisons and synthetic scalability measurements.
+- Added dependency vulnerability and static source scan workflows.
+
 - Added a second historical upstream example and a clean control.
 - Added security regression tests and an off-origin response detection backstop.
 
