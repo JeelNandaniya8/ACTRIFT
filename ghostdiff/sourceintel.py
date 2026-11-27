@@ -13,7 +13,7 @@ def changed_hunks(repo,good,bad):
     if len(names)>100:raise ValueError("Source comparison exceeds 100 changed source files")
     result=[]
     for name in names:
-        raw=git(repo,"diff","--no-ext-diff","--no-textconv","--unified=0",good,bad,"--",name,limit=512*1024).decode("utf-8",errors="replace")
+        raw=git(repo,"diff","--no-ext-diff","--no-textconv","--unified=0",good,bad,"--",":(literal)"+name,limit=512*1024).decode("utf-8",errors="replace")
         current=None
         for line in raw.splitlines():
             match=HUNK.match(line)

@@ -76,6 +76,23 @@ jobs:
       - name: Historical benchmark in a network-disabled container
         run: |
           docker run --rm --network none --read-only --tmpfs /tmp:rw,nosuid,nodev,size=512m --tmpfs /home/ghostdiff:rw,nosuid,nodev,uid=10001,gid=10001,size=64m --cap-drop ALL --security-opt no-new-privileges --pids-limit 256 --memory 1g --cpus 2 --shm-size 256m --entrypoint python ghostdiff-preview /app/benchmarks/historical.py --out /tmp/historical.json
+      - name: Compare static bundles in a network-disabled container
+        shell: bash
+        run: |
+          set -euo pipefail
+          python scripts/static_bundle_smoke.py
+          run_bundle() {
+            timeout 120s docker run --rm -i --network none --read-only --tmpfs /tmp:rw,nosuid,nodev,size=512m --tmpfs /home/ghostdiff:rw,nosuid,nodev,uid=10001,gid=10001,size=64m --cap-drop ALL --security-opt no-new-privileges --pids-limit 256 --memory 1g --cpus 2 --shm-size 256m --entrypoint python ghostdiff-preview -m ghostdiff.static_bundle compare --allow-actions < "$1"
+          }
+          run_bundle clean-static.json > clean-static-result.json
+          code=0
+          run_bundle broken-static.json > broken-static-result.json || code=$?
+          test "$code" = 1
+          python -c 'import json; a=json.load(open("clean-static-result.json")); b=json.load(open("broken-static-result.json")); assert a["verdict"]=="matched_observations" and b["verdict"]=="differences_observed" and b["summary"]["behavior_changed"]==1'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: isolated-static-results
+          path: "*-static-result.json"
   action-smoke:
     runs-on: ubuntu-latest
     timeout-minutes: 15
