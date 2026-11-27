@@ -123,11 +123,14 @@ jobs:
       - run: pip install -e .
       - run: python -m playwright install --with-deps chromium
       - run: python benchmarks/scale.py --out scale.json
+      - run: python benchmarks/todomvc_scale.py --out todomvc-scale.json
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: scalability-measurements
-          path: scale.json
+          path: |
+            scale.json
+            todomvc-scale.json
   package-preview:
     needs: [test, cross-browser, isolated-demo, action-smoke, scalability]
     runs-on: ubuntu-latest

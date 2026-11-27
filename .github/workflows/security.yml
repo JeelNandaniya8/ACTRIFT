@@ -21,6 +21,10 @@ jobs:
       - name: Static source scan (review report)
         if: always()
         run: bandit -r ghostdiff -f json -o source-audit.json --exit-zero
+      - name: Publish scanner finding counts
+        if: always()
+        run: python scripts/security_summary.py | tee -a "$GITHUB_STEP_SUMMARY"
+        shell: bash
       - uses: actions/upload-artifact@v4
         if: always()
         with:

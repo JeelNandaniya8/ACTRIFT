@@ -93,12 +93,16 @@ def stable_json(data) -> str:
 DISCOVER = r'''() => {
   const visible = e => { const r=e.getBoundingClientRect(); const s=getComputedStyle(e); return r.width>0&&r.height>0&&s.visibility!=='hidden'&&s.display!=='none'; };
   const label = e => { const ids=e.getAttribute('aria-labelledby'); if(ids){const n=ids.split(/\s+/).map(x=>document.getElementById(x)?.innerText||'').join(' ').trim(); if(n)return n;} return e.getAttribute('aria-label') || e.innerText || e.value || e.getAttribute('title') || ''; };
-  return [...document.querySelectorAll('button,[role=button],input[type=button],input[type=submit],a[href],[role=link]')].filter(e=>visible(e)&&!e.disabled&&e.getAttribute('aria-disabled')!=='true').map(e=>({role:e.matches('a[href],[role=link]')?'link':'button', name:label(e).replace(/\s+/g,' ').trim()})).filter(a=>a.name&&a.name.length<=120);
+  const candidates=document.querySelectorAll('button,[role=button],input[type=button],input[type=submit],a[href],[role=link]');
+  if(candidates.length>5000) throw Error('Action candidate observation limit (5000) exceeded');
+  return [...candidates].filter(e=>visible(e)&&!e.disabled&&e.getAttribute('aria-disabled')!=='true').map(e=>({role:e.matches('a[href],[role=link]')?'link':'button', name:label(e).replace(/\s+/g,' ').trim()})).filter(a=>a.name&&a.name.length<=120);
 }'''
 
 
 def available(page) -> list[Action]:
     actions = sorted(set(Action(**a) for a in page.evaluate(DISCOVER)))
+    if len(actions)>256:
+        raise ValueError("Unique named action observation limit (256) exceeded")
     return [a for a in actions if page.get_by_role(a.role, name=a.name, exact=True).count() == 1]
 
 
@@ -178,6 +182,24 @@ def validate_path(path, cfg, form_values=None):
             raise ValueError("Invalid explicit form value")
 
 
+class BoundedEvents(list):
+    """Keep a bounded sample and flag overflow rather than silently passing."""
+    def __init__(self, limit):
+        super().__init__()
+        self.limit=limit
+        self.overflow=False
+
+    def append(self,value):
+        if len(self)<self.limit:
+            super().append(value)
+        else:
+            self.overflow=True
+
+    def clear(self):
+        super().clear()
+        self.overflow=False
+
+
 def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settings, storage_state=None, form_values=None) -> dict:
     """Every path starts in a fresh browser context; no real user session is used."""
     form_values=form_values or {}
@@ -186,11 +208,11 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
         return {"status":"inconclusive","reason":"Action excluded by safety rules","steps":[]}
     context = browser.new_context(accept_downloads=True, service_workers="block",storage_state=local_storage_state(storage_state,url),viewport={"width":1000,"height":700})
     allowed = origin(url)
-    blocked = []
-    downloads = []
-    page_errors = []
-    http_errors = []
-    pages = []
+    blocked = BoundedEvents(20)
+    downloads = BoundedEvents(8)
+    page_errors = BoundedEvents(20)
+    http_errors = BoundedEvents(20)
+    pages = BoundedEvents(2)
     steps = []
 
     def gate(route):
@@ -207,6 +229,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
 
     def on_download(item):
         downloads.append(item)
+        # Overflow is classified as inconclusive before hashing any downloads.
 
     def on_response(response):
         # Redirects may bypass request interception. Observe unexpected responses
@@ -281,17 +304,25 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
             if origin(page.url) != allowed:
                 return {"status":"inconclusive", "reason":"Navigation left the authorized origin", "steps":steps}
             current = snapshot(page,cfg)
+            if any(x.overflow for x in (downloads,page_errors,http_errors)):
+                return {"status":"inconclusive","reason":"Browser event observation limit exceeded","steps":steps}
             files = []
+            total_download_bytes=0
             for item in downloads:
                 if item.failure():
                     return {"status":"inconclusive", "reason":"Download did not complete", "steps":steps}
                 p = Path(item.path())
                 size = p.stat().st_size
+                total_download_bytes += size
+                if total_download_bytes > 20 * 1024 * 1024:
+                    return {"status":"inconclusive","reason":"Aggregate download observation limit (20 MiB) exceeded","steps":steps}
                 if size > 10 * 1024 * 1024:
                     return {"status":"inconclusive", "reason":"Download exceeds 10 MiB observation limit", "steps":steps}
                 data = p.read_bytes()
                 files.append({"name":item.suggested_filename,"bytes":size,"sha256":hashlib.sha256(data).hexdigest(),
                               "format_hint":"pdf" if data.startswith(b'%PDF-') else "other"})
+            if any(x.overflow for x in (downloads,page_errors,http_errors)):
+                return {"status":"inconclusive","reason":"Browser event observation limit exceeded","steps":steps}
             outcome=delta(previous,current,files)
             outcome["page_errors"]=sorted(page_errors[:20])
             if http_errors:
