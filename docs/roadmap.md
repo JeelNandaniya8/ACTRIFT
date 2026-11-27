@@ -24,3 +24,5 @@ Network-disabled, mount-free static bundle comparison is implemented experimenta
 Checksum-bound prebuilt frontend provisioning and artifact bisection are implemented experimentally. Arbitrary source builds and backend provisioning remain open.
 
 The VS Code read-only evidence extension has an initial implementation and Node unit tests. Extension-host validation, VSIX packaging and Marketplace publication remain open.
+
+ACTRIFT rebranding candidate v0.8.0 uses the renamed distribution and CLI while preserving legacy wire formats. Fresh CI, owner repository rename, new PyPI trusted publisher and publication remain pending. The v0.7.0 release is unchanged.

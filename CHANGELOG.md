@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.8.0 — ACTRIFT rebranding candidate
+
+- Rename public product, distribution, CLI and editor extension while preserving legacy evidence schemas, Python import namespace and fixture contracts. Old published v0.7.0 remains unchanged. New package requires fresh CI, trusted publisher and release verification.
+
 ## 0.7.0 — Git and context intelligence preview
 
 - Add read-only VS Code development extension for strict evidence inspection and Node CI tests.

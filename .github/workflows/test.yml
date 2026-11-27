@@ -28,8 +28,8 @@ jobs:
       - run: python benchmarks/htmx_history.py --out htmx-history.json
       - run: python benchmarks/htmx_ajax_history.py --out htmx-ajax-history.json
       - run: python benchmarks/ghostbench.py --suite core --out ghostbench-core.json
-      - run: ghostdiff demo --out demo-report
-      - run: ghostdiff freeze demo-report/evidence.json --out contracts.json --test-out test_protected.py
+      - run: actrift demo --out demo-report
+      - run: actrift freeze demo-report/evidence.json --out contracts.json --test-out test_protected.py
       - run: python -m compileall -q test_protected.py
       - run: python -m pip check
       - run: python scripts/ci_summary.py demo-report/evidence.json
@@ -63,7 +63,7 @@ jobs:
           python-version: '3.12'
       - run: pip install -e .
       - run: python -m playwright install --with-deps ${{ matrix.browser }}
-      - run: ghostdiff doctor --browser ${{ matrix.browser }}
+      - run: actrift doctor --browser ${{ matrix.browser }}
       - run: python -m unittest discover -s tests -p test_cross_browser.py -v
         env:
           GHOSTDIFF_CROSS_BROWSER: ${{ matrix.browser }}
@@ -170,7 +170,7 @@ jobs:
           python-version: '3.12'
       - run: python -m pip install -e .
       - run: python -m playwright install chromium
-      - run: ghostdiff doctor
+      - run: actrift doctor
       - run: python -m unittest discover -s tests -p test_cross_browser.py -v
         env:
           GHOSTDIFF_CROSS_BROWSER: chromium
@@ -209,12 +209,13 @@ jobs:
           python-version: '3.12'
       - run: pip install build
       - run: python -m build
+      - run: python scripts/check_brand_package.py
       - run: (cd dist && sha256sum *.whl *.tar.gz > SHA256SUMS)
       - run: |
           python -m venv /tmp/ghostdiff-wheel-check
           /tmp/ghostdiff-wheel-check/bin/pip install dist/*.whl
           cd /tmp
-          /tmp/ghostdiff-wheel-check/bin/ghostdiff --help
+          /tmp/ghostdiff-wheel-check/bin/actrift --help
       - uses: actions/upload-artifact@v4
         with:
           name: ghostdiff-preview-distribution

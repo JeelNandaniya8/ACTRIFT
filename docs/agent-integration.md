@@ -1,17 +1,17 @@
 # Agent and automation integration
 
-GHOSTDIFF does not require a model service. A human developer or an agent with local command execution can use the same deterministic policy interface. The integration is a CLI/JSON contract, not an installed third-party connector or hosted MCP server.
+ACTRIFT does not require a model service. A human developer or an agent with local command execution can use the same deterministic policy interface. The integration is a CLI/JSON contract, not an installed third-party connector or hosted MCP server.
 
 Offline inspection:
 
 ```sh
-ghostdiff agent-summary ghostdiff-report/evidence.json --strict
+actrift agent-summary ghostdiff-report/evidence.json --strict
 ```
 
 Explicitly authorized execution against independently disposable local fixtures:
 
 ```sh
-ghostdiff agent-run examples/agent.json --allow-actions
+actrift agent-run examples/agent.json --allow-actions
 ```
 
 Review the config and replace both URLs with actual fixture origins. Agent execution accepts the read-policy config only, excludes screenshots and reverse exploration, never enables backend reset or write-mode flags, and requires explicit authorization. Browser activity may still mutate local state through GET or client-side code. Use disposable synthetic data and OS isolation.

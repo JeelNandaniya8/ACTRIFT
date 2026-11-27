@@ -1,9 +1,9 @@
 # Local history and source maps
 
 ```sh
-ghostdiff history-record report/evidence.json --db history.db --project demo --revision v1
-ghostdiff history-show --db history.db --project demo
-ghostdiff localize report/evidence.json --repo ./app --good GOOD_SHA --bad BAD_SHA --source-maps maps.json
+actrift history-record report/evidence.json --db history.db --project demo --revision v1
+actrift history-show --db history.db --project demo
+actrift localize report/evidence.json --repo ./app --good GOOD_SHA --bad BAD_SHA --source-maps maps.json
 ```
 
 SQLite stores revision labels, scoped hashes, counts and insertion timestamps, not original page content. Use a dedicated trusted local database. Revisions cannot be silently overwritten; distinct scopes remain incomparable.

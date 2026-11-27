@@ -1,4 +1,4 @@
-name: GHOSTDIFF behavior check
+name: ACTRIFT behavior check
 description: Compare two already-running disposable local web applications.
 inputs:
   before:
@@ -51,7 +51,7 @@ runs:
         flags=()
         if [ "$REQUIRE_COMPLETE" = true ]; then flags+=(--require-complete); fi
         set +e
-        ghostdiff compare --before "$BEFORE" --after "$AFTER" --depth "$DEPTH" --budget "$BUDGET" --allow-actions --fail-on-change --summary-only "${flags[@]}" --out "$out"
+        actrift compare --before "$BEFORE" --after "$AFTER" --depth "$DEPTH" --budget "$BUDGET" --allow-actions --fail-on-change --summary-only "${flags[@]}" --out "$out"
         status=$?
         set -e
         python "$GITHUB_ACTION_PATH/scripts/ci_summary.py" "$out/evidence.json" >> "$GITHUB_STEP_SUMMARY"

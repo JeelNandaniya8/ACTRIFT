@@ -14,7 +14,7 @@ def create_server(evidence):
     report=load_report(Path(evidence))
     normal=summarize(report)
     strict=summarize(report,True)
-    server=FastMCP("GHOSTDIFF")
+    server=FastMCP("ACTRIFT")
     @server.tool()
     def evidence_summary(strict_policy: bool=False) -> dict:
         """Return bounded verdicts and counters from the operator-selected local report."""
@@ -22,7 +22,7 @@ def create_server(evidence):
     return server
 
 def main(argv=None):
-    p=argparse.ArgumentParser(prog="ghostdiff-mcp")
+    p=argparse.ArgumentParser(prog="actrift-mcp")
     p.add_argument("--evidence",required=True,help="Operator-selected evidence JSON")
     args=p.parse_args(argv)
     create_server(args.evidence).run(transport="stdio")

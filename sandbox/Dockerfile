@@ -8,5 +8,5 @@ RUN pip install --no-cache-dir . && python -m playwright install --with-deps chr
 COPY benchmarks ./benchmarks
 USER 10001:10001
 ENV HOME=/home/ghostdiff XDG_CACHE_HOME=/tmp/cache XDG_CONFIG_HOME=/tmp/config
-ENTRYPOINT ["ghostdiff"]
+ENTRYPOINT ["actrift"]
 CMD ["demo","--out","/tmp/report"]

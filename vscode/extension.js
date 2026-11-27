@@ -24,10 +24,10 @@ async function readBounded(file) {
 
 function activate(context) {
     const vscode = require("vscode");
-    const channel = vscode.window.createOutputChannel("GHOSTDIFF Evidence");
-    context.subscriptions.push(channel, vscode.commands.registerCommand("ghostdiff.openEvidence", async () => {
+    const channel = vscode.window.createOutputChannel("ACTRIFT Evidence");
+    context.subscriptions.push(channel, vscode.commands.registerCommand("actrift.openEvidence", async () => {
         if (!vscode.workspace.isTrusted) {
-            vscode.window.showWarningMessage("GHOSTDIFF requires a trusted workspace.");
+            vscode.window.showWarningMessage("ACTRIFT requires a trusted workspace.");
             return;
         }
         const selected = await vscode.window.showOpenDialog({ canSelectFiles: true, canSelectFolders: false, canSelectMany: false, filters: { "Evidence JSON": ["json"] }, openLabel: "Inspect evidence" });
@@ -35,12 +35,12 @@ function activate(context) {
         try {
             const summary = parseEvidence(await readBounded(selected[0].fsPath));
             channel.clear();
-            channel.appendLine("GHOSTDIFF — strict observed-evidence summary");
+            channel.appendLine("ACTRIFT — strict observed-evidence summary");
             channel.appendLine(JSON.stringify(summary, null, 2));
             channel.show(true);
-            vscode.window.showInformationMessage("GHOSTDIFF: " + summary.verdict.replaceAll("_", " "));
+            vscode.window.showInformationMessage("ACTRIFT: " + summary.verdict.replaceAll("_", " "));
         } catch {
-            vscode.window.showErrorMessage("GHOSTDIFF: invalid, oversized, changed or unreadable evidence file.");
+            vscode.window.showErrorMessage("ACTRIFT: invalid, oversized, changed or unreadable evidence file.");
         }
     }));
 }

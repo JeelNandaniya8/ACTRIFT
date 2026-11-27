@@ -1,6 +1,6 @@
 # Safety, authentication and dynamic data
 
-GHOSTDIFF skips common risky English action names by default. Add exact custom labels with `--ignore "Delete, Logout"`. The heuristic is not a security boundary: names may be misleading, localized or unnamed, and GET requests can mutate data. Non-read HTTP methods are blocked unless explicitly enabled. Use disposable local apps, synthetic data and isolated execution only. The explicit `--allow-risky-actions` flag disables the heuristic, not custom ignores.
+ACTRIFT skips common risky English action names by default. Add exact custom labels with `--ignore "Delete, Logout"`. The heuristic is not a security boundary: names may be misleading, localized or unnamed, and GET requests can mutate data. Non-read HTTP methods are blocked unless explicitly enabled. Use disposable local apps, synthetic data and isolated execution only. The explicit `--allow-risky-actions` flag disables the heuristic, not custom ignores.
 
 Use `--mask-text .timestamp --mask-text '#order-id'` for deliberate text exclusions. The selected elements are temporarily hidden during text capture, then restored synchronously; this can affect mutation observers or layout. Action discovery is not masked. Invalid selectors fail rather than silently passing. Exclusions reduce coverage and are recorded in settings.
 

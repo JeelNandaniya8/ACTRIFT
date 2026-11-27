@@ -73,4 +73,4 @@ jobs:
             echo "Release already exists; refusing overwrite."
             exit 1
           fi
-          gh release create "v$version" --target "$COMMIT" --prerelease --title "GHOSTDIFF v$version preview" --notes-file "docs/release-$version.md" dist/* 
+          gh release create "v$version" --target "$COMMIT" --prerelease --title "ACTRIFT v$version preview" --notes-file "docs/release-$version.md" dist/* 

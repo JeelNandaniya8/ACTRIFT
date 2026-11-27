@@ -27,7 +27,7 @@ The action emits a fixed-label numeric summary. If a maintainer explicitly grant
       await github.rest.issues.createComment({
         owner: context.repo.owner, repo: context.repo.repo,
         issue_number: context.issue.number,
-        body: 'GHOSTDIFF observed results: ' + text
+        body: 'ACTRIFT observed results: ' + text
       });
 ```
 

@@ -31,7 +31,7 @@ def report_html(report):
         title = row.get("name") or " / ".join(a["name"] for a in row["path"]) or "Initial inventory"
         evidence = json.dumps({"baseline":without_images(row["before"]),"candidate":without_images(row["after"])}, indent=2, ensure_ascii=False)
         rows.append(f'<details><summary>{i:02d} · {escape(title)} <b>{escape(row["status"])}</b></summary><p>{escape(row["reason"])}</p>{screenshots(row)}<pre>{escape(evidence)}</pre></details>')
-    return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Ghostdiff evidence</title><style>body{font:16px/1.6 system-ui;margin:40px auto;max-width:960px;padding:0 20px;color:#26352f;background:#faf9f6}h1{font-size:3rem;letter-spacing:-.05em}details{border-top:1px solid #bbc5bd;padding:16px 0}summary{cursor:pointer}b{float:right;color:#315c50}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#edf0ec;padding:16px}footer{margin-top:36px}</style><h1>Behavior, compared.</h1><p>GHOSTDIFF / EVIDENCE V1</p><p>'+escape(report["before_url"])+' → '+escape(report["after_url"])+'</p><pre>'+escape(json.dumps(report["summary"],indent=2))+'</pre><h2>Exploration coverage</h2><pre>'+escape(json.dumps(report.get("coverage",{}),indent=2))+'</pre><details><summary>Baseline-only actions (review)</summary><pre>'+escape(json.dumps(report.get("baseline_only_actions",[]),indent=2))+'</pre></details>'+''.join(rows)+'<footer>'+escape(report["limits"])+'</footer></html>'
+    return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Actrift evidence</title><style>body{font:16px/1.6 system-ui;margin:40px auto;max-width:960px;padding:0 20px;color:#26352f;background:#faf9f6}h1{font-size:3rem;letter-spacing:-.05em}details{border-top:1px solid #bbc5bd;padding:16px 0}summary{cursor:pointer}b{float:right;color:#315c50}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#edf0ec;padding:16px}footer{margin-top:36px}</style><h1>Behavior, compared.</h1><p>ACTRIFT / EVIDENCE V1</p><p>'+escape(report["before_url"])+' → '+escape(report["after_url"])+'</p><pre>'+escape(json.dumps(report["summary"],indent=2))+'</pre><h2>Exploration coverage</h2><pre>'+escape(json.dumps(report.get("coverage",{}),indent=2))+'</pre><details><summary>Baseline-only actions (review)</summary><pre>'+escape(json.dumps(report.get("baseline_only_actions",[]),indent=2))+'</pre></details>'+''.join(rows)+'<footer>'+escape(report["limits"])+'</footer></html>'
 
 def save(report, target, summary_only=False):
     out=Path(target)
@@ -50,7 +50,7 @@ def save(report, target, summary_only=False):
     print("Report:",out/"report.html")
 
 def main(argv=None):
-    parser=argparse.ArgumentParser(prog="ghostdiff")
+    parser=argparse.ArgumentParser(prog="actrift")
     sub=parser.add_subparsers(dest="command",required=True)
     for name in ("demo","compare"):
         p=sub.add_parser(name)
@@ -61,7 +61,7 @@ def main(argv=None):
         p.add_argument("--repeats",type=int,default=2)
         p.add_argument("--browser-executable")
         p.add_argument("--browser",choices=("chromium","firefox","webkit"),default="chromium")
-        p.add_argument("--out",default="ghostdiff-report")
+        p.add_argument("--out",default="actrift-report")
         p.add_argument("--parallel",action="store_true",help="Compare independent local versions concurrently in separate browsers")
         p.add_argument("--summary-only",action="store_true",help="Suppress observed action names in console output")
         p.add_argument("--ignore",action="append",default=[],help="Comma-separated exact action names to skip; repeatable")
@@ -120,7 +120,7 @@ def main(argv=None):
     p=sub.add_parser("localize",help="Correlate observed divergence with changed Git source hunks")
     p.add_argument("evidence");p.add_argument("--repo",required=True);p.add_argument("--good",required=True);p.add_argument("--bad",required=True);p.add_argument("--source-maps");p.add_argument("--out")
     p=sub.add_parser("compare-config",help="Compare local versions using reviewed JSON settings")
-    p.add_argument("config");p.add_argument("--allow-actions",action="store_true");p.add_argument("--out",default="ghostdiff-report")
+    p.add_argument("config");p.add_argument("--allow-actions",action="store_true");p.add_argument("--out",default="actrift-report")
     p=sub.add_parser("timeline",help="Compare scoped fingerprints in an ordered local history")
     p.add_argument("manifest");p.add_argument("--out")
     p=sub.add_parser("agent-summary",help="Emit a data-minimized machine-readable evidence summary")
@@ -231,7 +231,7 @@ def main(argv=None):
             with sync_playwright() as p:
                 browser=launch_browser(p,Settings(browser=a.browser))
                 try:
-                    print(f"GHOSTDIFF {__version__}; {a.browser} {browser.version}; browser launch OK")
+                    print(f"ACTRIFT {__version__}; {a.browser} {browser.version}; browser launch OK")
                 finally:
                     browser.close()
             return 0
@@ -281,12 +281,12 @@ def main(argv=None):
             return exit_code(report,strict=a.require_complete)
         return 0
     except KeyboardInterrupt:
-        print("ghostdiff: interrupted; no complete result",file=sys.stderr)
+        print("actrift: interrupted; no complete result",file=sys.stderr)
         return 130
     except BrowserError as exc:
-        print(f"ghostdiff: browser unavailable or failed: {str(exc).splitlines()[0]}",file=sys.stderr)
-        print("Install the requested browser with python -m playwright install <browser>; run ghostdiff doctor --browser <browser>",file=sys.stderr)
+        print(f"actrift: browser unavailable or failed: {str(exc).splitlines()[0]}",file=sys.stderr)
+        print("Install the requested browser with python -m playwright install <browser>; run actrift doctor --browser <browser>",file=sys.stderr)
         return 2
     except (ValueError,OSError,KeyError,IndexError,TypeError,AttributeError) as exc:
-        print(f"ghostdiff: {exc}",file=sys.stderr)
+        print(f"actrift: {exc}",file=sys.stderr)
         return 2

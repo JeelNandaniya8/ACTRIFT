@@ -1,10 +1,10 @@
 # Prebuilt frontend artifact provisioning
 
-Use existing trusted project CI to build each revision of a frontend application (for example, a bundler's static dist output). GHOSTDIFF provisions and compares the resulting static browser assets; it does not execute package installation or repository build scripts.
+Use existing trusted project CI to build each revision of a frontend application (for example, a bundler's static dist output). ACTRIFT provisions and compares the resulting static browser assets; it does not execute package installation or repository build scripts.
 
 ```sh
-ghostdiff artifact-pack ./dist --commit FULL_40_CHARACTER_SHA --out build-a.json
-ghostdiff build-bisect manifest.json --allow-actions --exhaustive
+actrift artifact-pack ./dist --commit FULL_40_CHARACTER_SHA --out build-a.json
+actrift build-bisect manifest.json --allow-actions --exhaustive
 ```
 
 The first command prints an entry containing commit, artifact filename and sha256. Repeat for each revision, store the JSON artifacts alongside a reviewed manifest, and use entries in chronological revision order:

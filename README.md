@@ -1,6 +1,8 @@
-# GHOSTDIFF
+# ACTRIFT
 
-**Git diff shows what changed in code. GHOSTDIFF investigates what changed in observable behavior.**
+Formerly published as GHOSTDIFF (ghostdiff-lab v0.7.0). ACTRIFT v0.8.0 is the renamed release candidate, not yet published. Historical releases remain unchanged. See [migration guide](docs/migration.md).
+
+**Git diff shows what changed in code. ACTRIFT investigates what changed in observable behavior.**
 
 A local-first research preview for comparing two disposable web application versions, replaying user journeys, and preserving stable regression contracts. No required external model API. Not a general proof of software correctness.
 
@@ -9,29 +11,29 @@ A local-first research preview for comparing two disposable web application vers
 Python 3.10+ and a Playwright browser are required.
 
 ```sh
-git clone https://github.com/JeelNandaniya8/GHOSTDIFF.git
-cd GHOSTDIFF
+git clone https://github.com/JeelNandaniya8/GHOSTDIFF.git actrift
+cd actrift
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .
 python -m playwright install chromium
-ghostdiff doctor
-ghostdiff demo --out demo-report
+actrift doctor
+actrift demo --out demo-report
 ```
 
-Open `demo-report/report.html` or `demo-report/observatory.html`. The demo has three deliberately planted regressions: a PDF export no-op, missing history button, and theme persistence failure. Use `ghostdiff demo --clean` for a harmless redesign control.
+Open `demo-report/report.html` or `demo-report/observatory.html`. The demo has three deliberately planted regressions: a PDF export no-op, missing history button, and theme persistence failure. Use `actrift demo --clean` for a harmless redesign control.
 
 ## Compare and preserve
 
 ```sh
-ghostdiff compare --before http://127.0.0.1:3000 --after http://127.0.0.1:3001 --allow-actions --out report
-ghostdiff freeze report/evidence.json --out contracts.json
-ghostdiff verify contracts.json --target http://127.0.0.1:3001 --allow-actions
-ghostdiff fingerprint report/evidence.json --side before
-ghostdiff diagnose report/evidence.json
+actrift compare --before http://127.0.0.1:3000 --after http://127.0.0.1:3001 --allow-actions --out report
+actrift freeze report/evidence.json --out contracts.json
+actrift verify contracts.json --target http://127.0.0.1:3001 --allow-actions
+actrift fingerprint report/evidence.json --side before
+actrift diagnose report/evidence.json
 ```
 
-Use `ghostdiff match` on forward/reverse captures for review-only rename hypotheses, and `ghostdiff bisect` for a supplied ordered manifest of already-running local revisions. See [evidence intelligence](docs/intelligence.md). These are constrained observational tools, not general semantic inference, automatic build orchestration, or source-level root cause proof.
+Use `actrift match` on forward/reverse captures for review-only rename hypotheses, and `actrift bisect` for a supplied ordered manifest of already-running local revisions. See [evidence intelligence](docs/intelligence.md). These are constrained observational tools, not general semantic inference, automatic build orchestration, or source-level root cause proof.
 
 ## Features and limits
 
@@ -61,19 +63,19 @@ Distribution artifacts are gated on CI. A maintainer can dispatch the verified-r
 
 Apache-2.0. Vendored benchmark sources retain their upstream licenses.
 
-New experimental commands: `ghostdiff git-bisect` provisions trusted local static Git snapshots automatically without modifying the checkout; `ghostdiff localize` ranks changed source hunks against observed error paths and action labels. [Git intelligence usage](docs/git-intelligence.md). Matching now examines stable shared-prefix contexts as well as initial actions.
+New experimental commands: `actrift git-bisect` provisions trusted local static Git snapshots automatically without modifying the checkout; `actrift localize` ranks changed source hunks against observed error paths and action labels. [Git intelligence usage](docs/git-intelligence.md). Matching now examines stable shared-prefix contexts as well as initial actions.
 
-Use `ghostdiff compare-config examples/compare.json --allow-actions` with reviewed local URLs for repeatable configuration and optional reverse (candidate-side) exploration. Explicit journeys support native checkbox, single-select and Enter/Escape actions. macOS and Windows Chromium smoke checks are included in CI. These are not full platform or arbitrary interaction coverage.
+Use `actrift compare-config examples/compare.json --allow-actions` with reviewed local URLs for repeatable configuration and optional reverse (candidate-side) exploration. Explicit journeys support native checkbox, single-select and Enter/Escape actions. macOS and Windows Chromium smoke checks are included in CI. These are not full platform or arbitrary interaction coverage.
 
 For stateful disposable local fixtures, explicitly enable the [backend reset protocol](docs/backend-reset.md) with `--reset-backend`. It requires a dedicated fixture-only endpoint and independent servers, and is not a general database reset mechanism.
 
-Explicit JSON API comparison: `--observe-api /api/items` records bounded response status and digest evidence for selected local synthetic endpoints. See [API observation](docs/api-observation.md). `ghostdiff timeline examples/timeline.json` combines saved fingerprints across operator-supplied revisions; different scopes are marked incomparable.
+Explicit JSON API comparison: `--observe-api /api/items` records bounded response status and digest evidence for selected local synthetic endpoints. See [API observation](docs/api-observation.md). `actrift timeline examples/timeline.json` combines saved fingerprints across operator-supplied revisions; different scopes are marked incomparable.
 
 The portable Observatory includes status filters, journey search and coverage/performance summaries. Comparisons also save `diagnostics.json` for first-divergence inspection. Selected API requests must complete within the observation window or the result is inconclusive.
 
 ### Agent-assisted workflows
 
-Use `ghostdiff agent-summary report/evidence.json --strict` to inspect existing evidence without executing browser actions. `ghostdiff agent-run examples/agent.json --allow-actions` provides a data-minimized JSON result for explicitly authorized disposable local fixtures. See [agent integration](docs/agent-integration.md). No AI model or paid API is required.
+Use `actrift agent-summary report/evidence.json --strict` to inspect existing evidence without executing browser actions. `actrift agent-run examples/agent.json --allow-actions` provides a data-minimized JSON result for explicitly authorized disposable local fixtures. See [agent integration](docs/agent-integration.md). No AI model or paid API is required.
 
 Optional local [MCP integration](docs/mcp.md), persistent SQLite fingerprint history and offline Source Map v3 support are available experimentally. See [history and maps](docs/history-and-maps.md).
 
@@ -83,6 +85,6 @@ PyPI trusted publishing is prepared via the maintainer-controlled workflow. See 
 
 For prebuilt static fixture comparisons in a network-disabled container, see [the static bundle runner](sandbox/README.md). It accepts bounded asset data via stdin and returns a data-minimized verdict without mounting host directories.
 
-Use `ghostdiff artifact-pack` and `ghostdiff build-bisect` for checksum-verified prebuilt static frontend revisions. See [build artifact provisioning](docs/build-artifacts.md). Builds themselves remain the responsibility of the trusted project CI.
+Use `actrift artifact-pack` and `actrift build-bisect` for checksum-verified prebuilt static frontend revisions. See [build artifact provisioning](docs/build-artifacts.md). Builds themselves remain the responsibility of the trusted project CI.
 
 A read-only [VS Code development extension](vscode/README.md) can inspect explicitly selected revision-3 evidence JSON files with a strict verdict and data-minimized findings. It does not execute browser actions or publish to the Marketplace.

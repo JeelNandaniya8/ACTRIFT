@@ -1,8 +1,8 @@
 {
-  "name": "ghostdiff-evidence",
-  "displayName": "GHOSTDIFF Evidence",
+  "name": "actrift-evidence",
+  "displayName": "ACTRIFT Evidence",
   "description": "Inspect local behavioral regression evidence without executing browser actions.",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "publisher": "JeelNandaniya8",
   "license": "Apache-2.0",
   "engines": {
@@ -18,7 +18,7 @@
   },
   "main": "./extension.js",
   "activationEvents": [
-    "onCommand:ghostdiff.openEvidence"
+    "onCommand:actrift.openEvidence"
   ],
   "capabilities": {
     "untrustedWorkspaces": {
@@ -31,8 +31,8 @@
   "contributes": {
     "commands": [
       {
-        "command": "ghostdiff.openEvidence",
-        "title": "GHOSTDIFF: Inspect Local Evidence"
+        "command": "actrift.openEvidence",
+        "title": "ACTRIFT: Inspect Local Evidence"
       }
     ]
   },
