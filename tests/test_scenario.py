@@ -45,3 +45,18 @@ class BrowserScenarioTests(unittest.TestCase):
         html=b"""<html><body><label>Query<input type="search" id="q"></label><button onclick="document.querySelector('p').textContent=document.querySelector('#q').value">Search</button><p>Ready</p></body></html>"""
         with serve(html) as a,serve(html) as b:
             self.assertEqual(run_journeys(spec,a,b,Settings(settle_ms=100))["summary"],{"equivalent_observed":1})
+
+    def test_native_controls_and_enter(self):
+        spec={"schema":"ghostdiff.journeys/v1","journeys":[{"name":"Controls","steps":[
+            {"action":"check","name":"Enabled"},
+            {"action":"select","name":"Mode","label":"Detailed"},
+            {"action":"fill","name":"Query","value":"fixture"},
+            {"action":"press","name":"Query","key":"Enter"}]}]}
+        good=b"""<html><body><label>Enabled<input type="checkbox"></label><label>Mode<select><option>Basic</option><option>Detailed</option></select></label><label>Query<input onkeydown="if(event.key==='Enter')document.querySelector('p').textContent='Done'"></label><p>Ready</p></body></html>"""
+        bad=good.replace(b"textContent='Done'",b"textContent='Broken'")
+        with serve(good) as a,serve(good) as b,serve(bad) as c:
+            cfg=Settings(settle_ms=100)
+            self.assertEqual(run_journeys(spec,a,b,cfg)["summary"],{"equivalent_observed":1})
+            self.assertEqual(run_journeys(spec,a,c,cfg)["summary"],{"behavior_changed":1})
+        broken=copy.deepcopy(spec);broken["journeys"][0]["steps"][-1]["key"]="Control+L"
+        with self.assertRaises(ValueError):parse_spec(broken)

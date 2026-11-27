@@ -17,6 +17,7 @@ from .diagnostics import diagnose
 from .bisect import bisect
 from .gitintel import git_bisect
 from .sourceintel import localize
+from .config import parse_config
 
 def report_html(report):
     escape = lambda x: html.escape(str(x))
@@ -105,8 +106,22 @@ def main(argv=None):
     p.add_argument("repo");p.add_argument("--good",required=True);p.add_argument("--bad",required=True);p.add_argument("--site",default=".");p.add_argument("--contracts");p.add_argument("--allow-actions",action="store_true");p.add_argument("--exhaustive",action="store_true");p.add_argument("--out")
     p=sub.add_parser("localize",help="Correlate observed divergence with changed Git source hunks")
     p.add_argument("evidence");p.add_argument("--repo",required=True);p.add_argument("--good",required=True);p.add_argument("--bad",required=True);p.add_argument("--out")
+    p=sub.add_parser("compare-config",help="Compare local versions using reviewed JSON settings")
+    p.add_argument("config");p.add_argument("--allow-actions",action="store_true");p.add_argument("--out",default="ghostdiff-report")
     a=parser.parse_args(argv)
     try:
+        if a.command=="compare-config":
+            if not a.allow_actions:parser.error("compare-config requires --allow-actions")
+            before,after,cfg,bidirectional,strict=parse_config(json.loads(Path(a.config).read_text(encoding="utf-8")))
+            forward=compare(before,after,cfg)
+            save(forward,a.out)
+            if bidirectional:
+                reverse=compare(after,before,cfg)
+                save(reverse,Path(a.out)/"reverse")
+                hypotheses=match_renames(forward,reverse)
+                (Path(a.out)/"rename-hypotheses.json").write_text(json.dumps(hypotheses,indent=2),encoding="utf-8")
+            # New candidate actions are reported in reverse evidence, not used as baseline failures.
+            return exit_code(forward,strict=strict)
         if a.command in ("fingerprint","match","diagnose","bisect","git-bisect","localize"):
             def load(path):return json.loads(Path(path).read_text(encoding="utf-8"))
             if a.command=="fingerprint": result=fingerprint(load(a.evidence),a.side)

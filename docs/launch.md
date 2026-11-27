@@ -42,3 +42,5 @@ GHOSTDIFF compares disposable local versions of a web app, finds repeatable diff
 Repository: https://github.com/JeelNandaniya8/GHOSTDIFF
 
 Demo recording sequence: run the planted demo, open the report, show the PDF failure, inspect the diagnosis, freeze the baseline and show the fingerprint. Record an actual run, not a fabricated result. No social post has been published by this document.
+
+For the 0.7.0 preview, show an actual local Git snapshot bisect with a disposable example, then compare a source-localization report. State that only static snapshots are automatically provisioned and that candidate hunks are hypotheses. Use exact-revision verification and the maintainer-controlled release workflow before announcing the new package.

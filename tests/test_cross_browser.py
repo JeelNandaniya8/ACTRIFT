@@ -6,7 +6,7 @@ from ghostdiff.engine import Settings, compare
 
 ENGINE=os.environ.get("GHOSTDIFF_CROSS_BROWSER")
 
-@unittest.skipUnless(ENGINE in ("firefox","webkit"),"requires explicit browser matrix")
+@unittest.skipUnless(ENGINE in ("chromium","firefox","webkit"),"requires explicit browser matrix")
 class CrossBrowserTests(unittest.TestCase):
     def test_observable_journeys(self):
         cfg=Settings(browser=ENGINE,depth=1,budget=8,settle_ms=300,timeout_ms=6000)

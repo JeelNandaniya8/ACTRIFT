@@ -162,7 +162,7 @@ def delta(before, after, downloads):
 
 
 def has_signal(outcome):
-    return any(outcome.get(key) for key in ("text_added", "text_removed", "route_change", "downloads", "actions_added", "actions_removed", "page_errors", "http_errors"))
+    return any(outcome.get(key) for key in ("text_added", "text_removed", "route_change", "downloads", "actions_added", "actions_removed", "page_errors", "http_errors", "control_change"))
 
 
 def http_failure(resource_type, status):
@@ -175,11 +175,20 @@ def validate_path(path, cfg, form_values=None):
         raise ValueError("Journey exceeds configured depth")
     form_values=form_values or {}
     for i,a in enumerate(path):
-        allowed=("textbox","searchbox") if i in form_values else ("button","link","reload")
+        allowed=("textbox","searchbox","checkbox","combobox") if i in form_values else ("button","link","reload")
         if a.role not in allowed or not isinstance(a.name, str) or not 1 <= len(a.name) <= 120:
             raise ValueError("Unsupported action in journey")
-        if i in form_values and (not isinstance(form_values[i],str) or len(form_values[i])>500):
-            raise ValueError("Invalid explicit form value")
+        if i not in form_values:continue
+        value=form_values[i]
+        valid=False
+        if a.role in ("textbox","searchbox"):
+            valid=isinstance(value,str) and len(value)<=500
+            valid=valid or isinstance(value,dict) and set(value)=={"op","key"} and value["op"]=="press" and value["key"] in ("Enter","Escape")
+        elif a.role=="checkbox":
+            valid=isinstance(value,dict) and set(value)=={"op"} and value["op"] in ("check","uncheck")
+        elif a.role=="combobox":
+            valid=isinstance(value,dict) and set(value)=={"op","label"} and value["op"]=="select" and isinstance(value["label"],str) and 1<=len(value["label"])<=200
+        if not valid:raise ValueError("Invalid explicit form operation")
 
 
 class BoundedEvents(list):
@@ -299,6 +308,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
             page_errors.clear()
             http_errors.clear()
             error_locations.clear()
+            control_change=None
             if action.role == 'reload':
                 response = page.reload(wait_until='domcontentloaded', timeout=cfg.timeout_ms)
                 if response is None or not response.ok:
@@ -316,7 +326,26 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
                         return {"status":"inconclusive","reason":"Unsupported or read-only form field","steps":steps}
                     if re.search(r"password|passcode|secret|token|credit.card|card.number|cvv|otp",action.name,re.I):
                         return {"status":"inconclusive","reason":"Sensitive form field excluded","steps":steps}
-                    locator.fill(form_values[i],timeout=cfg.timeout_ms)
+                    operation=form_values[i]
+                    if isinstance(operation,str):locator.fill(operation,timeout=cfg.timeout_ms)
+                    else:locator.press(operation["key"],timeout=cfg.timeout_ms)
+                elif action.role in ("checkbox","combobox"):
+                    if re.search(r"password|passcode|secret|token|credit.card|card.number|cvv|otp",action.name,re.I):
+                        return {"status":"inconclusive","reason":"Sensitive form field excluded","steps":steps}
+                    operation=form_values[i]
+                    if action.role=="checkbox":
+                        if not locator.evaluate("e => e.tagName==='INPUT' && e.type==='checkbox'"):
+                            return {"status":"inconclusive","reason":"Only native checkbox controls supported","steps":steps}
+                        old=locator.is_checked()
+                        locator.set_checked(operation["op"]=="check",timeout=cfg.timeout_ms)
+                        new=locator.is_checked()
+                    else:
+                        if not locator.evaluate("e => e.tagName==='SELECT' && !e.multiple"):
+                            return {"status":"inconclusive","reason":"Only native single-select controls supported","steps":steps}
+                        old=locator.evaluate("e => e.selectedIndex")
+                        locator.select_option(label=operation["label"],timeout=cfg.timeout_ms)
+                        new=locator.evaluate("e => e.selectedIndex")
+                    if old!=new:control_change={"role":action.role,"from":old,"to":new}
                 else:
                     locator.click(timeout=cfg.timeout_ms)
             page.wait_for_timeout(cfg.settle_ms)
@@ -347,6 +376,7 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
             if any(x.overflow for x in (downloads,page_errors,http_errors)):
                 return {"status":"inconclusive","reason":"Browser event observation limit exceeded","steps":steps}
             outcome=delta(previous,current,files)
+            if control_change is not None:outcome["control_change"]=control_change
             outcome["page_errors"]=sorted(page_errors[:20])
             if error_locations:outcome["source_locations"]=sorted(error_locations,key=stable_json)
             if http_errors:

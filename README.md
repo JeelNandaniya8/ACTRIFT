@@ -62,3 +62,5 @@ Distribution artifacts are gated on CI. A maintainer can dispatch the verified-r
 Apache-2.0. Vendored benchmark sources retain their upstream licenses.
 
 New experimental commands: `ghostdiff git-bisect` provisions trusted local static Git snapshots automatically without modifying the checkout; `ghostdiff localize` ranks changed source hunks against observed error paths and action labels. [Git intelligence usage](docs/git-intelligence.md). Matching now examines stable shared-prefix contexts as well as initial actions.
+
+Use `ghostdiff compare-config examples/compare.json --allow-actions` with reviewed local URLs for repeatable configuration and optional reverse (candidate-side) exploration. Explicit journeys support native checkbox, single-select and Enter/Escape actions. macOS and Windows Chromium smoke checks are included in CI. These are not full platform or arbitrary interaction coverage.

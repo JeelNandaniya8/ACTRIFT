@@ -16,3 +16,5 @@
 Do not interpret fixture pass counts as general accuracy.
 
 Static Git snapshot automation, context-aware matching and source hunk correlation are implemented experimentally. Build-dependent applications, general semantic equivalence and causal source mapping remain research goals. A pinned htmx integration regression expands the historical corpus.
+
+Reviewed JSON config, optional reverse exploration, native checkbox/select/key operations and macOS/Windows Chromium smoke gates have initial implementations. Full candidate graph exploration, backend provisioning/reset and additional interaction types remain open.

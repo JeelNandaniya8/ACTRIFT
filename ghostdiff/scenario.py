@@ -28,6 +28,15 @@ def parse_spec(spec):
             if kind=="fill" and set(step) in ({"action","name","value"},{"action","name","value","role"}):
                 path.append(Action(step.get("role","textbox"),step["name"]))
                 values[i]=step["value"]
+            elif kind in ("check","uncheck") and set(step)=={"action","name"}:
+                path.append(Action("checkbox",step["name"]))
+                values[i]={"op":kind}
+            elif kind=="select" and set(step)=={"action","name","label"}:
+                path.append(Action("combobox",step["name"]))
+                values[i]={"op":"select","label":step["label"]}
+            elif kind=="press" and set(step) in ({"action","name","key"},{"action","name","key","role"}):
+                path.append(Action(step.get("role","textbox"),step["name"]))
+                values[i]={"op":"press","key":step["key"]}
             elif kind=="click" and set(step)=={"action","role","name"} and step["role"] in ("button","link"):
                 path.append(Action(step["role"],step["name"]))
             elif kind=="reload" and set(step)=={"action"}:
