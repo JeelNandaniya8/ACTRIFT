@@ -11,3 +11,5 @@ The optional container recipe disables networking during the bundled demo and us
 Storage-state JSON may contain credentials. Never commit or upload it. Optional screenshots and captured text may contain sensitive application data. The default risky-action name filter is a heuristic and cannot prevent all destructive effects; keep using disposable isolated fixtures.
 
 Explicit synthetic form journeys retain the default network and action restrictions. Password-like field detection is heuristic, not a guarantee. Session state is scoped to the target local origin and cookie host. Do not supply secrets or real user information.
+
+The engine also flags observed off-origin HTTP responses as inconclusive. This is a detection backstop, not prevention: a request may already have reached another origin (including redirects). Security regression tests check direct off-origin fetch blocking, default POST blocking and HTML report escaping. They are not an independent security audit.

@@ -107,3 +107,5 @@ Repeated action-time HTTP 5xx responses from fetch/XHR and HTTP 4xx/5xx document
 ## Coverage and CI policy
 
 `--fail-on-change` also rejects stable baseline-only action inventory entries, even when the path budget prevented clicking them. Such entries may indicate a rename, not necessarily a broken action. `--require-complete` additionally rejects skipped actions, budget-omitted branches and unobserved journeys within the selected depth. Depth frontiers remain explicit and are not proof of full coverage. `--summary-only` suppresses individual action names in console output, not in saved reports.
+
+The [security self-review](docs/security-review.md) records tested controls and remaining risks. The historical benchmark suite now includes a second pinned upstream example with a fixed-versus-fixed control. Latest results are available in CI; this is not a production-scale accuracy or security claim.

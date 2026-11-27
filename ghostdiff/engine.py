@@ -205,6 +205,14 @@ def experiment(browser: Browser, url: str, path: tuple[Action, ...], cfg: Settin
         downloads.append(item)
 
     def on_response(response):
+        # Redirects may bypass request interception. Observe unexpected responses
+        # as a second check, without claiming they were prevented.
+        try:
+            same_origin=origin(response.url)==allowed
+        except ValueError:
+            same_origin=False
+        if not same_origin:
+            blocked.append("Unexpected off-origin HTTP response")
         kind=response.request.resource_type
         if http_failure(kind,response.status):
             # Do not retain query strings, request bodies, headers or credentials.

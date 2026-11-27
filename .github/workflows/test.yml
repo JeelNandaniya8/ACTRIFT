@@ -23,6 +23,7 @@ jobs:
       - run: python benchmarks/run.py --out benchmark.json
       - run: python benchmarks/upstream.py --out upstream-benchmark.json
       - run: python benchmarks/historical.py --out historical-benchmark.json
+      - run: python benchmarks/channel_history.py --out channel-history.json
       - run: ghostdiff demo --out demo-report
       - run: ghostdiff freeze demo-report/evidence.json --out contracts.json --test-out test_protected.py
       - run: python -m compileall -q test_protected.py
@@ -35,6 +36,7 @@ jobs:
             benchmark.json
             upstream-benchmark.json
             historical-benchmark.json
+            channel-history.json
             demo-report/
             contracts.json
             test_protected.py

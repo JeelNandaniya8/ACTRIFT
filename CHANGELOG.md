@@ -2,6 +2,9 @@
 
 ## 0.5.0 — practical controls preview
 
+- Added a second historical upstream example and a clean control.
+- Added security regression tests and an off-origin response detection backstop.
+
 - Report actual budget-omitted branches, depth frontiers and baseline-only action inventory.
 - Add optional strict coverage gate and summary-only CI output.
 
