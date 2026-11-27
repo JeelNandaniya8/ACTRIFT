@@ -16,3 +16,5 @@ Independent review, dedicated VM isolation, production data handling, resource e
 Additional automated checks: pip-audit against the installed application dependencies and a Bandit source scan. Inspect the security workflow artifacts and triage findings before release. These tools are third-party scanners, not a third-party human audit. No independent auditor has been engaged.
 
 A bounded-observation review adds resource-limit regression tests for excess named controls and error floods, plus bounded event samples and aggregate download hashing. These are not full denial-of-service controls. A public request for independent review is tracked in the repository; only an actual independent reviewer can complete it. The security CI publishes Bandit counts by severity/confidence/rule for triage, with raw findings retained in its artifact.
+
+The optional MCP dependency set is included in the Python vulnerability scan. The stdio server exposes fixed counters from an operator-selected report; tool calls accept no paths, URLs or commands. Source maps and local history remain trusted local inputs. Independent review is still required.

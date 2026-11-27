@@ -13,7 +13,7 @@ jobs:
           python-version: '3.12'
       - run: |
           python -m venv /tmp/ghostdiff-audit-env
-          /tmp/ghostdiff-audit-env/bin/pip install -e .
+          /tmp/ghostdiff-audit-env/bin/pip install -e '.[mcp]'
           /tmp/ghostdiff-audit-env/bin/pip freeze --exclude-editable > audit-requirements.txt
           python -m pip install pip-audit bandit
       - name: Known dependency vulnerabilities

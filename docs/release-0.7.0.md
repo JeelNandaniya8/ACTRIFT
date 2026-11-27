@@ -7,3 +7,5 @@ This preview does not run arbitrary builds, infer source causality, prove semant
 Additional changes before publication: explicit test-backend reset protocol, bounded selected API digests, offline scope-aware timelines, API completion checks and searchable Observatory reports. Reset requires an explicitly opted-in fixture endpoint; incomplete selected responses are inconclusive. Review the current security workflow and test results for the exact commit.
 
 Local agents and other automation can use a data-minimized JSON summary and explicitly authorized read-policy comparison command. No hosted agent service or external model dependency is introduced.
+
+Candidate additions include optional read-only MCP, local SQLite history, explicit source maps, a second pinned htmx historical fixture and a static project site. Verify the exact revision before publication.

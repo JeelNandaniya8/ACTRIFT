@@ -1,28 +1,18 @@
 # Roadmap
 
-## Implemented, subject to exact-revision CI
-- Bounded browser comparison, replay, contracts, explicit forms and reviewed aliases.
-- Evidence fingerprints, observational rename hypotheses, first-divergence diagnostics, and local revision-manifest bisection.
-- GHOSTBENCH core and scaling report aggregation; pinned historical upstream examples and TodoMVC large-state cases.
-- Parallel comparison, browser matrix, reusable CI action, automated scans and gated package artifacts.
+## Implemented in the research preview (verify exact revision)
+- Bounded browser exploration, explicit journeys, replay, contracts, reviewed aliases, API digests and opt-in test-only backend reset.
+- Scope-aware fingerprints, history timeline and SQLite history.
+- Contextual matching hypotheses, static Git bisection, changed-hunk ranking and explicit offline source maps.
+- Searchable Observatory, local agent CLI and optional read-only MCP.
+- Browser/platform smoke matrix, selected historical and synthetic benchmarks, automated scans and gated package builds.
+- Static project site and owner-controlled deployment workflow.
 
-## Open research and launch work
-- Independent reviewer report and remediation; robust OS-level isolation.
-- Production-scale multi-user backend validation, deterministic state reset, diverse historical defects and representative controls.
-- Source-level root cause correlation, semantic matching beyond observed one-step outcomes, verified Git revision provisioning.
-- Candidate-side exploration, platform matrix for macOS/Windows, configuration usability and external beta testing.
-- Publish verified release and community announcements through authorized maintainer accounts.
+## Remaining limitations and external milestones
+- Independent security review, robust isolation and broad production multi-user validation.
+- Representative historical corpus across more upstream projects; comparative effectiveness studies.
+- Build-dependent provisioning, backend adapters, arbitrary controls and complete candidate exploration.
+- General semantic equivalence, verified deployment identity and causal source attribution.
+- Official GitHub release, PyPI publisher registration, site activation and external beta feedback.
 
-Do not interpret fixture pass counts as general accuracy.
-
-Static Git snapshot automation, context-aware matching and source hunk correlation are implemented experimentally. Build-dependent applications, general semantic equivalence and causal source mapping remain research goals. A pinned htmx integration regression expands the historical corpus.
-
-Reviewed JSON config, optional reverse exploration, native checkbox/select/key operations and macOS/Windows Chromium smoke gates have initial implementations. Full candidate graph exploration, backend provisioning/reset and additional interaction types remain open.
-
-An explicit disposable backend reset protocol and SQLite integration cases are implemented experimentally. Generic backend provisioning and authenticated reset-dependent contracts remain unsupported.
-
-Explicit bounded JSON API observation and offline fingerprint history are implemented experimentally. Full API semantics, durable history storage and production validation remain open.
-
-A CLI/JSON interface for local agent orchestration has an initial implementation. A hosted service or MCP integration is not implemented.
-
-An optional read-only stdio MCP server, SQLite fingerprint history and ordinary offline Source Map v3 decoding are implemented; remote MCP, arbitrary build provisioning and source causation remain unsupported.
+Fixture success is not a general accuracy rate. No independent certification or production readiness is claimed.

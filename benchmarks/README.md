@@ -11,6 +11,8 @@ A second historical example, the MDN missing-MessagePort fix, is exercised by `p
 `python benchmarks/todomvc_scale.py` runs the historical TodoMVC regression and two controls for each of 100 and 1,000 synthetic stored tasks. It reports exact expected/observed verdicts and wall time and retains repeated evidence. The historical multi-file application is real upstream source, but its data and execution environment are synthetic. This is large-state validation, not production-scale deployment validation.
 
 ## GHOSTBENCH summary
-Run `python benchmarks/ghostbench.py --suite core --out ghostbench-core.json` after producing the six core reports, and `--suite scale --out ghostbench-scale.json` after the two scaling reports. Missing/invalid/failed reports fail the gate. This is a reproducibility manifest, not a 100-defect corpus or a generalized detection-rate estimate.
+Run `python benchmarks/ghostbench.py --suite core --out ghostbench-core.json` after producing the seven core reports, and `--suite scale --out ghostbench-scale.json` after the two scaling reports. Missing/invalid/failed reports fail the gate. This is a reproducibility manifest, not a 100-defect corpus or a generalized detection-rate estimate.
 
 The htmx historical suite tests the documented special-character ID out-of-band swap bug against two original pinned JavaScript revisions and a fixed-versus-fixed control using a real local HTTP response. This expands GHOSTBENCH to an additional upstream project. It is still a selected small corpus, not broad production validation.
+
+The second htmx historical fixture targets invalid-target Ajax fallback with exact upstream source and a fixed-versus-fixed control. This expands historical cases, not the number of distinct upstream projects.

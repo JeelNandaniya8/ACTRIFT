@@ -12,8 +12,8 @@ HTML=b"""<!doctype html><html><head><script src="/htmx.js"></script></head><body
 RESPONSE=b'<div id="foo-/bar/" hx-swap-oob="innerHTML">Updated content</div><p>Response received</p>'
 
 @contextmanager
-def fixture(name):
-    assets={"/":("text/html",HTML),"/htmx.js":("text/javascript",(ROOT/(name+".js")).read_bytes()),"/test":("text/html",RESPONSE)}
+def fixture(name,root=ROOT,html=HTML,response=RESPONSE):
+    assets={"/":("text/html",html),"/htmx.js":("text/javascript",(root/(name+".js")).read_bytes()),"/test":("text/html",response)}
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
             entry=assets.get(self.path)

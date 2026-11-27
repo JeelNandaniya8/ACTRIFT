@@ -2,6 +2,8 @@
 
 ## 0.7.0 — Git and context intelligence preview
 
+- Add static project site, second pinned htmx historical defect and optional MCP dependency audit.
+
 - Add optional read-only MCP stdio server, persistent SQLite fingerprint history and explicit offline source-map decoding.
 
 - Add data-minimized agent summaries and an explicitly authorized JSON-only comparison command.

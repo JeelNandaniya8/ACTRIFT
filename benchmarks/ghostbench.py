@@ -11,6 +11,7 @@ SUITES={
         "channel-history.json":"historical MDN channel messaging example",
         "todomvc-history.json":"historical TodoMVC reference application",
         "htmx-history.json":"historical htmx library integration defect",
+        "htmx-ajax-history.json":"historical htmx invalid target fallback",
     },
     "scale":{
         "scale.json":"synthetic action-width scaling",
