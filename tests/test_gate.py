@@ -26,7 +26,10 @@ class CoverageTests(unittest.TestCase):
             report=compare(a,b,Settings(depth=1,budget=2,settle_ms=100))
         self.assertEqual(report["coverage"]["omitted_budget_branches"],1)
         self.assertEqual(report["summary"].get("equivalent_observed"),1)
-        self.assertEqual(report["baseline_only_actions"],[{"path":[],"action":{"role":"button","name":"Z history"}}])
+        self.assertEqual(report["baseline_only_actions"],[
+            {"path":[],"action":{"role":"button","name":"Z history"}},
+            {"path":[{"role":"button","name":"A save"}],"action":{"role":"button","name":"Z history"}},
+        ])
         self.assertEqual(exit_code(report),1)
 
     def test_exact_budget_not_truncation(self):
